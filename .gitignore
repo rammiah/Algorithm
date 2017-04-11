@@ -1,0 +1,12 @@
+*.suo
+*.db
+*.log
+*.tlog
+*.idb
+*.obj
+*.exe
+*.filters
+*.sln
+BinaryTree/Debug/BinaryTree.ilk
+*.pdb
+*.ipch
