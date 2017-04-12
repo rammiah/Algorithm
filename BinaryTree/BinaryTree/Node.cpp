@@ -4,6 +4,7 @@ Node::Node(int value)
 	this->value = value;
 	left = NULL;
 	right = NULL;
+	count = 1;
 }
 
 void Node::Insert(int value)
@@ -14,6 +15,7 @@ void Node::Insert(int value)
 	}
 	else if (value > this->value)
 	{
+		++count;
 		if (this->right == NULL)
 		{
 			this->right = new Node(value);
@@ -25,6 +27,7 @@ void Node::Insert(int value)
 	}
 	else
 	{
+		++count;
 		if (this->left == NULL)
 		{
 			this->left = new Node(value);
@@ -35,6 +38,14 @@ void Node::Insert(int value)
 		}
 	}
 }
+void Node::Insert(vector<int> arr)
+{
+	for each (auto item in arr)
+	{
+		Insert(item);
+	}
+}
+
 void Node::Check()
 {
 	if (this == NULL)
@@ -45,3 +56,4 @@ void Node::Check()
 	cout << value << " ";
 	this->right->Check();
 }
+int Node::GetCount() { return count; }
