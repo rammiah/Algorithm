@@ -11,6 +11,10 @@ BinaryTree/Debug/BinaryTree.ilk
 *.pdb
 *.ipch
 *.vcxproj
+.vs/
+./debug/
 *.opendb
 线性表实现栈/Debug/线性表实现栈.ilk
 KMP/KMP/main.cpp
+*.json
+*.ilk
