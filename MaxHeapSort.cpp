@@ -54,7 +54,6 @@ void Build_Max_Heap(int *a, int length)
 void HeapSort(int *a, int length)
 {
 	Build_Max_Heap(a, length);
-	int number = length;
 	for (int i = length; i>0; i--)
 	{
 		int temp;
