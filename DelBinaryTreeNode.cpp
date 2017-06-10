@@ -63,7 +63,7 @@ void DeleteNode(Node*parent, Node*root, int value) {
         Node*to_del = root;
         if (root->left == nullptr && root->right == nullptr) {
             if (parent->left == root) parent->left = nullptr;
-            if (parent->right == root) parent->right = nullptr;
+            else parent->right = nullptr;
             delete to_del;
         } else if (root->right == nullptr) {
             root->value = root->left->value;
