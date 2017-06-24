@@ -61,6 +61,8 @@ int main(void) {
         cout << heap[i] << " ";
     }
     cout << endl;
-
+	// 忘了释放空间
+	delete[] heap;
+	
     return 0;
 }
