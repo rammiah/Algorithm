@@ -3,52 +3,42 @@
 using namespace std;
 
 template<class DataType>
-class HashTable
-{
+class HashTable{
 public:
-	HashTable(int size)
-	{
+	HashTable(int size){
 		maxSize = size;
 		count = 0;
 		element = new DataType[size];
-		if (element == NULL)
-		{
+		if (element == NULL) {
 			exit(1);
 		}
-		else
-		{
-			for (int i = 0; i<size; i++)
-			{
+		else {
+			for (int i = 0; i<size; i++){
 				element[i] = NULL;
 			}
 		}
 	}
-	~HashTable()
-	{
+	~HashTable(){
 		delete[] element;
 	}
-	DataType getData(int i)
-	{
-		if (i < 0 || i >= maxSize)
-		{
+	DataType getData(int i){
+		if (i < 0 || i >= maxSize){
 			exit(1);
 		}
-		else
-		{
+		else{
 			return element[i];
 		}
 
 	}
 
-	int getNum()
-	{
+	int getNum(){
 		return count;
 	}
-	//¹şÏ£º¯Êı£¬·µ»ØndataµÄ(ÔÚÊı×éÖĞµÄ)´æ´¢Î»ÖÃ    
+	//å“ˆå¸Œå‡½æ•°ï¼Œè¿”å›ndataçš„(åœ¨æ•°ç»„ä¸­çš„)å­˜å‚¨ä½ç½®    
 	int Hash(DataType nData);
-	//²åÈë²Ù×÷,²åÈënewDataµ½¹şÏ£±íÖĞ    
+	//æ’å…¥æ“ä½œ,æ’å…¥newDataåˆ°å“ˆå¸Œè¡¨ä¸­    
 	int insertHash(DataType newData);
-	//ËÑÑ°nDataµÄµ±Ç°´æ´¢Î»ÖÃ    
+	//æœå¯»nDataçš„å½“å‰å­˜å‚¨ä½ç½®    
 	int getHash(DataType nData);
 private:
 	int maxSize;
@@ -58,32 +48,26 @@ private:
 
 
 template<class DataType>
-int HashTable<DataType>::Hash(DataType newData)
-{
-	return newData%maxSize;//ÁôÓàÊı·¨    
+int HashTable<DataType>::Hash(DataType newData){
+	return newData%maxSize;//ç•™ä½™æ•°æ³•    
 }
 
-//ËÑË÷nDataµÄ¿Õ°×´æ´¢Î»ÖÃ    
+//æœç´¢nDataçš„ç©ºç™½å­˜å‚¨ä½ç½®    
 template<class DataType>
-int HashTable<DataType>::insertHash(DataType newData)
-{
-	if (getNum() == maxSize)
-	{
-		cerr << "¹şÏ£±íÒÑ¾­Âú" << endl;
+int HashTable<DataType>::insertHash(DataType newData){
+	if (getNum() == maxSize){
+		cerr << "å“ˆå¸Œè¡¨å·²ç»æ»¡" << endl;
 	}
 	int pos = Hash(newData);
-	if (element[pos] == NULL)
-	{
+	if (element[pos] == NULL){
 		element[pos] = newData;
 		count++;
 		return 1;
 	}
-	else
-	{
+	else{
 		int rpos = (pos + 1) % maxSize;
-		while (rpos != pos)
-		{
-			if (element[rpos] == NULL)//Ñ°ÕÒÃ»ÓĞ´æ´¢Êı¾İµÄÎ»ÖÃ    
+		while (rpos != pos){
+			if (element[rpos] == NULL)//å¯»æ‰¾æ²¡æœ‰å­˜å‚¨æ•°æ®çš„ä½ç½®    
 			{
 				element[rpos] = newData;
 				count++;
@@ -92,7 +76,7 @@ int HashTable<DataType>::insertHash(DataType newData)
 			rpos = (rpos + 1) % maxSize;
 		}
 
-		if (rpos == pos)//Èç¹û×îÖÕ¶¼Ã»ÄÜÕÒµ½¿ÕÎ»£¬Ö±½ÓÇ¿ĞĞ¸³Öµ    
+		if (rpos == pos)//å¦‚æœæœ€ç»ˆéƒ½æ²¡èƒ½æ‰¾åˆ°ç©ºä½ï¼Œç›´æ¥å¼ºè¡Œèµ‹å€¼    
 		{
 			element[rpos] = newData;
 			count++;
@@ -101,33 +85,26 @@ int HashTable<DataType>::insertHash(DataType newData)
 	}
 }
 
-//ËÑÑ°nDataµÄµ±Ç°´æ´¢Î»ÖÃ    
+//æœå¯»nDataçš„å½“å‰å­˜å‚¨ä½ç½®    
 template<class DataType>
-int HashTable<DataType>::getHash(DataType newData)
-{
+int HashTable<DataType>::getHash(DataType newData){
 	int pos = Hash(newData);
-	if (element[pos] == newData)
-	{
+	if (element[pos] == newData){
 		return pos;
 	}
-	else
-	{
+	else{
 		int rpos = (pos + 1) % maxSize;
-		while (rpos != pos)
-		{
-			if (element[rpos] == newData)
-			{
+		while (rpos != pos){
+			if (element[rpos] == newData){
 				return rpos;
 			}
 			rpos = (rpos + 1) % maxSize;
 		}
-		if (rpos == pos)
-		{
-			cerr << "ÎŞ·¨²éÕÒÖ¸¶¨ÔªËØµÄ´æ´¢Î»ÖÃ" << endl;
+		if (rpos == pos){
+			cerr << "æ— æ³•æŸ¥æ‰¾æŒ‡å®šå…ƒç´ çš„å­˜å‚¨ä½ç½®" << endl;
 			return -1;
 		}
-		else
-		{
+		else{
 			return rpos;
 		}
 	}
