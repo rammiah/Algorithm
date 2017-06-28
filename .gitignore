@@ -277,6 +277,6 @@ __pycache__/
 *.filters
 *.vcxproj
 # html javadoc
-*.htnl
+*.html
 *.css
 *.js
