@@ -1,28 +1,26 @@
-package _KMP;
-
 import java.util.Scanner;
 
 public class KMP {
-	
-	public static int[] preProcess(final String s) {  
-	    int size = s.length();  
-	    int[] result = new int[size];  
-	    result[0] = 0; 
-	    int j = 0;  
-	    //Ñ­»·¼ÆËã  
+
+	public static int[] preProcess(final String s) {
+	    int size = s.length();
+	    int[] result = new int[size];
+	    result[0] = 0;
+	    int j = 0;
+	    //Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	    for(int i=1;i<size;i++){  
-	        while(j>0 && s.charAt(j) != s.charAt(i)){  
-	            j = result[j];  
-	        }  
-	        if(s.charAt(j) == s.charAt(i)){  
-	            j++; 
-	        }  
-	        //ÕÒµ½Ò»¸ö½á¹û  
-	        result[i] = j;  
-	    }  
-	   return result;  
-	} 
-	
+	        while(j>0 && s.charAt(j) != s.charAt(i)){
+	            j = result[j];
+	        }
+	        if(s.charAt(j) == s.charAt(i)){
+	            j++;
+	        }
+	        //ï¿½Òµï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	        result[i] = j;
+	    }
+	   return result;
+	}
+
 	private static int Match(String target, String pattern) {
 		int[] table = preProcess(pattern);
 		int j = 0;
@@ -49,7 +47,7 @@ public class KMP {
 		}
 		return -1;
 	}
-	
+
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 		String target = new String();
