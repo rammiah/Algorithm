@@ -58,27 +58,42 @@ void MidPre(Node*root) {
     MidPre(root->right);
 }
 
-void DeleteNode(Node*parent, Node*root, int value) {
-    if (root->value == value) {
-        Node*to_del = root;
-        if (root->left == nullptr && root->right == nullptr) {
-            if (parent->left == root) parent->left = nullptr;
-            else parent->right = nullptr;
-            delete to_del;
-        } else if (root->right == nullptr) {
-            root->value = root->left->value;
-            DeleteNode(root, root->left, root->value);
-        } else {
-            root->value = root->right->value;
-            DeleteNode(root, root->right, root->value);
+void DeleteNode(Node*&toDel) {
+    Node*s, *q = toDel;
+    if (toDel->right == nullptr) {
+        toDel = toDel->left;
+        delete q;
+    } else if (toDel->left == nullptr) {
+        toDel = toDel->right;
+        delete q;
+    } else {
+        s = toDel->left;
+        while (s->right != nullptr) {
+            q = s;
+            s = s->right;
         }
-    } else if (root->value > value) {
-        DeleteNode(root, root->left, value);
-    } else{
-        DeleteNode(root, root->right, value);
+        toDel->value = s->value;
+        if (q != toDel) {
+            q->right = s->left;
+        } else {
+            q->left = s->left;
+        }
+        delete s;
     }
-} 
+}
 
+void Delete(Node*&root, const int& value) {
+    if (root == nullptr) {
+        return;
+    } else if (root->value > value) {
+        Delete(root->left, value);
+    } else if (root->value < value) {
+        Delete(root->right, value);
+    } else {
+        DeleteNode(root);
+    }
+
+}
 
 int main(void) {
     Node*root = new Node(0);
@@ -91,7 +106,12 @@ int main(void) {
     AddNode(root, 15);
     MidPre(root);
     cout << endl;
-    DeleteNode(nullptr, root,15);
+    cout << "Del 15" << endl;
+    Delete(root,15);
+    MidPre(root);
+    cout << endl;
+    cout << "Del 13" << endl;
+    Delete(root, 13);
     MidPre(root);
     cout << endl;
 
