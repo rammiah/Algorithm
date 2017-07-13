@@ -2,6 +2,7 @@
 #include <vector>	// 存储子节点
 #include <math.h>	// 计算UCB会用到
 #include <set>
+#include <stack>
 #include <ctime>
 using namespace std;
 // 便于识别
@@ -10,7 +11,7 @@ typedef int Player;
 #define NOBODY 0
 #define HUMAN 1
 #define AI 6	// 计算胜负比较容易
-const int n_in_row = 5;
+const int n_in_row = 4;
 struct Point {
 	// 屏幕左上角为远点，横向为x，纵向为y
 	int x;	// x坐标
@@ -20,7 +21,7 @@ struct Point {
 	Point(const Point&point): x(point.x), y(point.y) {}
 	// 重载输出运算符,==的话可能也要写一下啊
 	friend ostream&operator<<(ostream&out, Point&point) {
-		out << point.x << ", " << point.y;
+		out << "(" << point.x << ", " << point.y << ")";
 		return out;
 	}
 };
@@ -30,8 +31,6 @@ protected:
 	int boardSize;
 	// 注意需要自己写复制构造函数，不然父节点的children也会传下来
 	vector<vector<Player>>board;		// 棋盘的点的一个二维vector
-	
-
 	Player check(int&sum) {
 		if (sum / HUMAN == n_in_row) {
 			return HUMAN;
@@ -41,14 +40,16 @@ protected:
 		}
 		return NOBODY;
 	}
-	int left;
+	int left;	// 剩余节点数
 public:
 	
 	Board(int boardSize = 10) {
 		this->boardSize = boardSize;
+		//cout << this->boardSize << endl;
 		left = boardSize * boardSize;
 		this->board = vector<vector<Player>>(boardSize, vector<Player>(boardSize, NOBODY));
 	}
+
 	// 判断此点是否可走
 	bool canMove(const Point&point) const {
 		int x = point.x;
@@ -74,7 +75,7 @@ public:
 	int getSize() const {
 		return boardSize;
 	}
-
+	// 判断是否满了
 	bool isFull() {
 		return left <= 0;
 	}
@@ -86,6 +87,7 @@ public:
 	const Board&operator=(const Board&board) {
 		this->board = board.board;
 		this->left = board.left;
+		this->boardSize = board.boardSize;
 		return *this;
 	}
 };
@@ -110,15 +112,16 @@ public:
 
 class AIBoard{
 private:
-	static int limitTimes;
-	static int allTimes;
+	Board board;	// 棋盘
+	static int limitTimes;	// 限制次数
+	static int allTimes;	// 总次数
 	Point point;	// 本次多的是那个点
-	vector<Point>childrenMove;		// 可走点
+	stack<Point>childrenMove;		// 可走点
 	vector<AIBoard>children;		// 指向子节点的集合，一维vector
 	int win;		// 此节点胜利次数
 	int all;		// 此节点所有进行次数
-	const static int width = 1;
-
+	const static int width = 1;	// 拓展的范围
+	Player player;	// 此盘下的player
 	// 获取临近的点
 	void getNeighbor(vector<Point>&points, const Point&center, set<int>&points_set) {
 		Point point;
@@ -137,34 +140,26 @@ private:
 		}
 	}
 public:
-	Board board;	// 棋盘
 	// 由MCTS初始化的
-	AIBoard(const Board&board):board(board), win(1), all(1){
-		children = vector<AIBoard>();
-		//childrenMove = getCanMove();
-	}
+	AIBoard(){ }
 	// 自己调用初始化的
 	AIBoard(const Board&board, const Point&point, Player player) :board(board), win(1), all(1), point(point) {
 		children = vector<AIBoard>();
 		this->board.setPlayer(point, player);
-		//childrenMove = getCanMove();
+		this->player = player;
 	}
-
 	// 获取UCB值
-	double getUCB(int parentAll) {
+	double getUCB(const int&parentAll) {
 		return 1.0 * win / all + sqrt(2 * log(parentAll) / all);
 	}
-
 	// 获取胜率
 	double getRate() {
 		return 1.0 * win / all;
 	}
-
-	// 获取此棋盘多的那个点
+	// 获取此棋盘上个传下来多的那个点
 	Point getPoint() {
 		return point;
 	}
-
 	// 获取最好的点，这个只需要MCTS调用
 	Point getBestMove() {
 		int best = 0;
@@ -175,17 +170,17 @@ public:
 		}
 		return children[best].getPoint();
 	}
-
 	// 获取周围棋子，感觉这应该是个自己的函数
 	vector<Point> getCanMove() {
 		Point point;
-		set<int> points_set;
+		set<int>points_set;
 		vector<Point>points;
 		for (int row = 0; row < board.getSize(); ++row) {
 			for (int col = 0; col < board.getSize(); ++col) {
 				point.x = col;
 				point.y = row;
 				// 在这里不能走说明有人，下面获取周围的位置
+				//cout << col << " " << row << endl;
 				if (!board.canMove(point)) {
 					getNeighbor(points, point, points_set);	// 传参为引用，直接修改points，board是共有的
 				}
@@ -193,78 +188,92 @@ public:
 		}
 		return points;
 	}
-
+	// 获取子节点可走地方
+	void getChildren() {
+		// 使用栈会让删除简单
+		vector<Point>childrenMove = getCanMove();
+		//cout << "Debug vector<Point> size: " << childrenMove.size() << endl;
+		for (int i = 0; i < childrenMove.size(); ++i) {
+			this->childrenMove.push(childrenMove[i]);
+		}
+	}
 	// 模拟开始，直到有一方胜利，函数返回胜利的player，感觉那个走的point也要返回，不如建一个子节点
 	Player silmulation(Player player) {
-		++allTimes;
 		Board tempBoard(board);		// temp先保存现在的棋盘，等模拟完换回去
 		Point point;
 		vector<Point> canMove;
-		srand(time(nullptr));
+		srand((unsigned)time(nullptr));		// 设置随机数种子
+		// 可以对子盘的节点进行simulation，最大的节点保存下来作为一个子节点
 		while (board.hasWinner() == NOBODY && !board.isFull()) {
 			canMove = getCanMove();
-			// 随机挑选一个点
+			// 随机获取
 			unsigned int _rand = ((unsigned)rand()) % canMove.size();
-			//cout << "index: " << _rand << " size: " << canMove.size() << endl;
 			point = canMove[_rand];
 			board.setPlayer(point, player);
 			player = AI + HUMAN - player;
-			//board.display();
 		}
 		player = board.hasWinner();
 		board = tempBoard;
-		if (player == AI) {
+		if (player == this->player) {
 			++win;
 		}
 		++all;
 		return player;
 	}
-
-	// 反向传播的不如直接写到getMove里面去，调用结束进行评估
-	// 这个只负责模拟，不负责获取最后输出到棋盘的结果
-	Player getMove(Player player) {
-		// 模拟
-		while (allTimes <= limitTimes) {
-			int best = 0;
-			for (int i = 0; i < children.size(); ++i) {
-				if (children[i].getUCB(all) > children[best].getUCB(all)) {
-					best = i;
-				}
-			}
-			Player p = children[best].silmulation(AI);
-			if (p == AI) {
-				++win;
-			}
-			++all;
-		}
-		return player;
-	}
-
-	void setBoard(const Board&board) {
+	// 设置棋盘
+	void setBoard(const Board board) {
 		this->board = board;
-		childrenMove.clear();
-		childrenMove = getCanMove();	// 此处出问题了
-		// 把children也设置了
+		getChildren();
 		children.clear();
-		for (int i = 0; i < childrenMove.size(); ++i) {
-			children.push_back(AIBoard(board, childrenMove[i], AI));
+		while (!childrenMove.empty()) {
+			children.push_back(AIBoard(board, childrenMove.top(), AI));
+			childrenMove.pop();
 		}
 	}
-
 	// 输出一下子棋盘的情况
 	void displayChildren() {
 		for (int i = 0; i < children.size(); ++i) {
 			cout << "Point: " << children[i].point << " rate: " << children[i].getRate() << endl;
 		}
 	}
-
 	// 重置一下次数
 	static void setTimes(int LimitTimes, int AllTimes) {
 		limitTimes = LimitTimes;
 		allTimes = AllTimes;
 	}
+	Player expand() {
+		Player p;
+		if (!childrenMove.empty()) {
+			children.push_back(AIBoard(board, childrenMove.top(), AI + HUMAN - player));
+			// 将新节点进行simulation
+			p = children.back().silmulation(AI + HUMAN - player);
+		}
+		else {
+			if (children.size() == 0) {
+				p = this->silmulation(AI + HUMAN - player);
+			}
+			else {
+				int best = 0;
+				for (int i = 0; i < children.size(); ++i) {
+					if (children[i].getUCB(all) > children[best].getUCB(all)) {
+						best = i;
+					}
+				}
+				// 最好的节点继续expand
+				p = children[best].expand();
+			}
+				
+		}
+		// 更新数据
+		if (p == player) {
+			++win;
+		}
+		++all;
+		// 返回个上级回溯
+		return p;
+	}
 };
-// 类外初始化
+// 类外初始化静态变量
 int AIBoard::allTimes = 0;
 int AIBoard::limitTimes = 0;
 
@@ -272,15 +281,14 @@ class MCTS {
 private:
 	// AI内部类，便于自己计算
 	AIBoard myboard;
+	int times;
 public:
-	// 关于构造函数，我想传入一个Board，可以看做节点向下传的，传的就是内部类的那个board
-	MCTS(const Board&board) : myboard(board) { }
-
+	MCTS(): times(200) {}
 	Point getMove(const Board&board) {
-		// 设置其最多模拟10^5次
-		AIBoard::setTimes(100, 0);
-		this->myboard.setBoard(board);
-		myboard.getMove(AI);
+		this->myboard.setBoard(board); 
+		for (int i = 0; i < 2000; ++i) {
+			this->myboard.expand();
+		}
 		myboard.displayChildren();
 		return myboard.getBestMove();
 	}
@@ -290,7 +298,7 @@ int main(void) {
 	Board board(6);			// 初始化棋盘
 	Player player = HUMAN;	// 设置第一步人先走
 	Human human;			// 初始化玩家
-	MCTS ai(board);			// 初始化AI
+	MCTS ai;			// 初始化AI
 	Point move(0, 0);		// 每次落点的一个临时变量
 	board.display();
 
