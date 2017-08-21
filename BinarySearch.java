@@ -5,7 +5,7 @@ public class Solution {
         if (nums == null
                 || nums.length == 0
                 || target < nums[0]
-                || target > nums[nums.length - 1]) return new int[]{-1, -1};
+                || target > nums[nums.length - 1]) return new int[] {-1, -1};
         int left = 0, right = 0;
         int len = nums.length;
         int l = 0, r = len - 1;
@@ -29,6 +29,6 @@ public class Solution {
         if (left < len && nums[left] == target) {
             return new int[] {left, right};
         }
-        return new int[]{-1, -1};
+        return new int[] {-1, -1};
     }
 }
