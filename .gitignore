@@ -282,3 +282,6 @@ __pycache__/
 *.js
 glibc/*
 java_src/*
+
+# vscode config
+.vscode/
