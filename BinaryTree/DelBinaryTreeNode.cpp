@@ -13,8 +13,8 @@ using std::endl;
 
 struct Node{
     int value;
-    Node*left;
-    Node*right;
+    Node *left;
+    Node *right;
     Node(int value) {
         this->value=value;
         this->left = nullptr;
@@ -22,7 +22,7 @@ struct Node{
     }
 };
 
-void AddNode(Node*root, int value) {
+void AddNode(Node *root, int value) {
     if (root->value == value) {
         return;
     } else if (root->value > value) {
@@ -40,7 +40,7 @@ void AddNode(Node*root, int value) {
     }
 }
 
-void MidPre(Node*root) {
+void MidPre(Node *root) {
     if (root == nullptr) {
         return;
     }
@@ -49,8 +49,8 @@ void MidPre(Node*root) {
     MidPre(root->right);
 }
 
-void DeleteNode(Node*&toDel) {
-    Node*s, *q = toDel;
+void DeleteNode(Node *&toDel) {
+    Node *s, *q = toDel;
     if (toDel->right == nullptr) {
         toDel = toDel->left;
         delete q;
@@ -73,7 +73,7 @@ void DeleteNode(Node*&toDel) {
     }
 }
 
-void Delete(Node*&root, const int& value) {
+void Delete(Node *&root, const int &value) {
     if (root == nullptr) {
         return;
     } else if (root->value > value) {
@@ -87,7 +87,7 @@ void Delete(Node*&root, const int& value) {
 }
 
 int main(void) {
-    Node*root = new Node(0);
+    Node *root = new Node(0);
     AddNode(root, 10);
     AddNode(root, 28);
     AddNode(root, 39);
