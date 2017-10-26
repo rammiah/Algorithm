@@ -1,9 +1,3 @@
-/**
- * C++: Floyd算法获取最短路径(邻接矩阵)
- *
- * @author skywang
- * @date 2014/04/25
- */
 #include <iomanip>
 #include <iostream>
 #include <vector>
