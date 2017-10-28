@@ -2,10 +2,14 @@
 #include <vector>
 #include <fstream>
 #include <algorithm>
+#include <iomanip>
+#include <cmath>
 
 using namespace std;
 // 从Java里得到的32bit float最大值
 const float FLOAT_MAX = 3.4028235E38f;
+const clock_t MICRO_SECOND = 1000;
+const clock_t SECOND = 1000 * MICRO_SECOND;
 
 // 存放结果的结构体
 struct Result {
@@ -17,23 +21,30 @@ struct Result {
     Result(vector<int> set, time_t used, float cost) : set(std::move(set)), used(used), cost(cost) {}
 };
 
-int require_size;  // 要求的set_size
+// 基本变量
+size_t require_size;  // 要求的set_size
 vector<vector<float>> graph;  // 存放距离的图
 size_t v_count;  // 图的顶点个数
 vector<bool> is_in_set;  // 记录是否在result set里的vector
 vector<float> delta;  // 就是那个delta数组
 int current_size = 0;  // 当前set的大小
 float current_cost = 0;  // 当前的cost，就是f
-vector<int> v_in_set;
-vector<int> v_out_set;
+vector<int> v_in_set; // 存放在集合中的顶点
+vector<int> v_out_set; // 存放不在其中的顶点
+// 扰动所用变量
+size_t current_iter = 0;
+vector<size_t> taboo;
+float best_cost = FLOAT_MAX;
+vector<int> best;
 
+clock_t end_t;
 
 // 输入完全图
 void input_graph(const string &file_name) {
     fstream input;
     // 打开文件
     input.open(file_name, ios_base::in);
-    // 输入顶点数和要得到的集合的大小
+    // 输入顶点数和要得到的集合的大小n
     input >> v_count >> require_size;
     // 得到图
     graph = std::vector<vector<float>>(v_count, vector<float>(v_count, 0));
@@ -57,7 +68,7 @@ void input_graph(const string &file_name) {
     input.close();
 }
 
-bool add_to_set(int v) {
+bool add_to_set(size_t v) {
     // 不合理就判错
     if (is_in_set[v]) {
         cerr << "Error: " << v << " should not in set.\n";
@@ -82,20 +93,31 @@ bool add_to_set(int v) {
 // 获取当前的cost
 float get_cost() {
     // 记录下max和min
-    float max_delta = 0, min_delta = FLOAT_MAX;
+    // 防止误差过大，在此将cost从点开始计算出来
+    // 双层循环即可
     for (int i = 0; i < v_count; ++i) {
-        // 在set里就计算是否是max或者min
-        if (is_in_set[i]) {
-            max_delta = max(max_delta, delta[i]);
-            min_delta = min(delta[i], min_delta);
+        delta[i] = 0;
+    }
+    // 把前require个位置占了放delta
+    for (int i = 0; i < require_size; ++i) {
+        for (int j = 0; j < require_size; ++j) {
+            // 选用best中的点
+            delta[i] += graph[best[i]][best[j]];
         }
+    }
+
+    float max_delta = 0, min_delta = FLOAT_MAX;
+    for (int i = 0; i < require_size; ++i) {
+        // 在set里就计算是否是max或者min
+        max_delta = max(max_delta, delta[i]);
+        min_delta = min(delta[i], min_delta);
     }
     // 返回cost
     return max_delta - min_delta;
 }
 
 
-bool remove_from_set(int v) {
+bool remove_from_set(size_t v) {
     if (!is_in_set[v]) {
         cerr << "Error: " << v << " should in set.\n";
         return false;
@@ -137,35 +159,33 @@ float get_after_add_cost(int v_to_in) {
     return max_delta - min_delta;
 }
 
-// 和上面add那个很像，不过需要减去v_to_out到i的距离
-float get_after_swap_cost(int v_to_in, int v_to_out) {
+// 计算如果交换cost会减少多少
+// 参数原为直接的点，不是下标，现在替换为下标
+// random里请不要使用此函数，如果不下降此函数会直接返回1
+float swap_cost_if_descend(const int &v_in_index, const int &v_out_index) {
     float v_delta = 0;
-    float max_delta = 0, min_delta = FLOAT_MAX;
     float temp_delta = 0;
-    for (int i = 0; i < v_count; ++i) {
-        if (is_in_set[i]) {
-            v_delta += graph[v_to_in][i];
-            // 更新delta
-            temp_delta = delta[i] + graph[v_to_in][i] - graph[v_to_out][i];
-            // 更新最大和最小
+    float max_delta = 0, min_delta = FLOAT_MAX;
+    // O(1)也优化一下
+    int v_out = v_out_set[v_out_index], v_in = v_in_set[v_in_index];
+    for (int i = 0; i < require_size; ++i) {
+        if (i != v_in_index) {
+            v_delta += graph[v_out][v_in_set[i]];
+            temp_delta = delta[v_in_set[i]] - graph[v_in][v_in_set[i]] + graph[v_out][v_in_set[i]];
             max_delta = max(temp_delta, max_delta);
             min_delta = min(temp_delta, min_delta);
+            // 不会下降的，跳出循环
+            if (max_delta - min_delta > current_cost) {
+                // 节约时间，直接返回1
+                return 1;
+            }
         }
     }
-    // 在这里处理一下
+    // 如果不下降返回1,下降返回下降的值
     max_delta = max(v_delta, max_delta);
     min_delta = min(v_delta, min_delta);
-    // 返回cost
-    return max_delta - min_delta;
-}
-
-// 计算如果交换cost会减少多少
-float swap_cost(const int &v_in, const int &v_out) {
-    is_in_set[v_in] = false;
-    float out_cost = get_after_swap_cost(v_out, v_in);
-    is_in_set[v_in] = true;
     // 返回差值
-    return out_cost - current_cost;
+    return (max_delta - min_delta) - current_cost;
 }
 
 // 测试时输出数据看的
@@ -193,7 +213,7 @@ void printSet() {
 // 初始化
 void get_init_sol() {
     // 随机加入一个
-    add_to_set(static_cast<int>(rand() % v_count));
+    add_to_set(rand() % v_count);
     int min_v = 0;
     float min_cost, temp_cost = 0;
     vector<int> all_best;
@@ -221,40 +241,32 @@ void get_init_sol() {
             }
         }
         // 随机选择加入
-        add_to_set(all_best[rand() % all_best.size()]);
+        add_to_set(static_cast<size_t>(all_best[rand() % all_best.size()]));
         // 把cost更新一下
         current_cost = min_cost;
     }
 }
 
-// std::swap居然不让用
-template <typename T>
-void swap(T& a, T&b){
-    T t = a;
-    a = b;
-    b = t;
+//// std::swap居然不让用
+namespace me {
+    template<typename T>
+    void swap(T &a, T &b) {
+        T t = a;
+        a = b;
+        b = t;
+    }
 }
+clock_t in_descend = 0;
 
 // 对当前进行持续优化的函数
-void improve() {
+void descend() {
+    clock_t s = clock();
     // 是否提升的一个flag
     bool improved = true;
-    // 互相交换的顶点
-    int v_to_in = 0, v_to_out = 0;
     // 提升的值，已有最大和当前点
     float max_improve = 0;
     float temp_improve = 0;
-
-    // 将点加入到v_in_set和v_out_set
-    int in = 0, out = 0;
-    for (int i = 0; i < v_count; ++i) {
-        if (is_in_set[i]) {
-            v_in_set[in++] = i;
-        } else {
-            v_out_set[out++] = i;
-        }
-    }
-    // 存放点对
+    // 存放点对的下标
     vector<pair<int, int>> can_swap;
 
     while (improved) {
@@ -263,19 +275,20 @@ void improve() {
         // 置为0
         max_improve = 0;
         can_swap.clear();
-        for (int i = 0; i < in; ++i) {
-            for (int o = 0; o < out; ++o) {
-                // 遍历所有的可交换点，取最优
-                temp_improve = swap_cost(v_in_set[i], v_out_set[o]);
+        for (int i = 0; i < require_size; ++i) {
+            for (int o = 0; o < v_count - require_size; ++o) {
+                // 遍历所有的可交换点，取最优,传参为下标
+                temp_improve = swap_cost_if_descend(i, o);
                 // 注意这里是负数
                 if (temp_improve < max_improve) {
                     // 更新improve和交换的顶点
                     max_improve = temp_improve;
                     improved = true;
-                    // 取得两顶点
+                    // 取得两顶点下标
                     can_swap.clear();
                     can_swap.push_back(make_pair(i, o));
                 } else if (abs(temp_improve - max_improve) < 0.0001) {
+                    // 取得下标
                     can_swap.push_back(make_pair(i, o));
                 }
             }
@@ -284,47 +297,140 @@ void improve() {
         //检测是否进行交换
         if (improved) {
             auto r = rand() % can_swap.size();
-            remove_from_set(v_in_set[can_swap[r].first]);
-            add_to_set(v_out_set[can_swap[r].second]);
+            // can_swap存放的是下标
+            remove_from_set(static_cast<size_t>(v_in_set[can_swap[r].first]));
+            add_to_set(static_cast<size_t>(v_out_set[can_swap[r].second]));
             // swap点
-            ::swap(v_in_set[can_swap[r].first], v_out_set[can_swap[r].second]);
+            me::swap(v_in_set[can_swap[r].first], v_out_set[can_swap[r].second]);
             // 更新cost
             current_cost += max_improve;
         }
     }
+
+    if (current_cost < best_cost) {
+        best = v_in_set;
+        best_cost = current_cost;
+        end_t = clock();
+    }
+    in_descend += clock() - s;
 }
 
-// reset函数
-void reset() {
-    current_size = 0;
-    current_cost = 0;
+
+// 定向扰动
+//TODO
+void directed() {
+    // 先将顶点分开
+    int in = 0, out = 0;
     for (int i = 0; i < v_count; ++i) {
-        is_in_set[i] = false;
-        delta[i] = 0;
+        if (is_in_set[i]) {
+            v_in_set[in++] = i;
+        } else {
+            v_out_set[out++] = i;
+        }
     }
+    // 定向扰动
+}
+
+// 求交换的cost，就算cost为正也不终止，用于randomed或者directed
+float get_swap_cost(const size_t &v_in_i, const size_t &v_out_i) {
+    // 进入此函数时，已经完成初始化，现对其进行优化
+    float v_delta = 0;
+    float max_delta = 0, min_delta = FLOAT_MAX;
+    float temp_delta = 0;
+    int v_in = v_in_set[v_in_i], v_out = v_out_set[v_out_i];
+
+    for (int i = 0; i < require_size; ++i) {
+        if (v_in_set[i] != v_in) {
+            temp_delta = delta[i] + graph[v_out][v_in_set[i]] - graph[v_in][v_in_set[i]];
+            v_delta += graph[v_out][v_in_set[i]];
+            max_delta = max(temp_delta, max_delta);
+            min_delta = min(temp_delta, min_delta);
+        }
+    }
+    // 在这里处理一下
+    max_delta = max(v_delta, max_delta);
+    min_delta = min(v_delta, min_delta);
+    // 返回cost
+    return max_delta - min_delta;
+}
+
+// clock_t s = 0;
+// clock_t e = 0;
+clock_t in_rand = 0;
+
+// 随机扰动
+void randomed(const size_t &iters) {
+    clock_t s = clock();
+    size_t to_out = 0, to_in = 0;
+    // 循环iters次
+    for (int i = 0; i < iters; ++i) {
+        // to_out可以直接随机选
+        to_out = rand() % require_size;
+        // 寻找一个未被禁忌的定点
+//        do {
+//            to_in = static_cast<int>(rand() % (v_count - require_size));
+//        } while (taboo[to_in] < current_iter);
+        to_in = rand() % (v_count - require_size);
+
+        // 计算cost
+        float cost = get_swap_cost(to_out, to_in);
+        // 删除、加入
+        remove_from_set(static_cast<size_t>(v_in_set[to_out]));
+        add_to_set(static_cast<size_t>(v_out_set[to_in]));
+        me::swap(v_in_set[to_out], v_out_set[to_in]);
+        // 更新变量
+        current_cost += cost;
+        if (current_cost < best_cost) {
+            best = v_in_set;
+            best_cost = current_cost;
+            end_t = clock();
+        }
+    }
+    in_rand += clock() - s;
+    // clock_t a = clock();
+    ++current_iter;
+//    descend();
+    // if (current_iter % 4 == 0) {
+    descend();
+    // }
+//    cout << "Current cost: " << setprecision(2) << current_cost << "\n";
 }
 
 // 对运算的一个封装吧
 void run() {
     get_init_sol();
-    improve();
+    int in = 0, out = 0;
+    for (int i = 0; i < v_count; ++i) {
+        if (is_in_set[i]) {
+            v_in_set[in++] = i;
+        } else {
+            v_out_set[out++] = i;
+        }
+    }
+    descend();
+
+    clock_t start = clock();
+    // 单位为us
+    while (clock() < start + v_count * SECOND / 10) {
+        randomed(require_size / 4);
+    }
 }
 
 // 输出到文件
 void print_to_file(const vector<Result> &result, const string &file_name) {
     fstream out;
     out.open(file_name, ios_base::out);
-    out << require_size << "\n\n";
+//    out << require_size << "\n\n";
     // 写入文件
     // 先输出所有的
-    out << "all result:\n\n";
+    out << "all result:\n";
     for (auto &item : result) {
         out << "v in set: ";
         for (const int &v : item.set) {
             out << v << " ";
         }
         out << endl;
-        out << "time used: "<< item.used << "ms" << endl;
+        out << "time used: " << item.used << "ms" << endl;
         out << "cost: " << item.cost << "\n\n";
     }
     // 得到平均操作时间和cost，顺便记下最优cost的编号，就不能用foreach了
@@ -345,22 +451,41 @@ void print_to_file(const vector<Result> &result, const string &file_name) {
         out << v << " ";
     }
     out << endl;
-    out << "time used: " << result[best].used << "ms" <<  endl;
+    out << "time used: " << result[best].used << "ms" << endl;
     out << "cost: " << result[best].cost << "\n\n";
+
+    // 输出到命令行一下
+    cout << "Best cost: " << result[best].cost << "\n";
 
     // 平均
     out << "average: \n";
     out << "average time: " << time_sum / result.size() << "ms" << endl;
-    out << "average cost: "<<  cost_sum / result.size() << "\n";
+    out << "average cost: " << cost_sum / result.size() << "\n";
     // 关闭文件
     out.close();
 }
 
+
+// reset函数
+void reset() {
+    current_size = 0;
+    current_cost = 0;
+    best_cost = FLOAT_MAX;
+    current_iter = 0;
+    in_rand = in_descend = 0;
+    for (int i = 0; i < v_count; ++i) {
+        is_in_set[i] = false;
+        delta[i] = 0;
+    }
+}
+
+// 封装
 int run_case(const string &file_name) {
     // 输入图。每次内存都会自动分配
     input_graph(file_name);
     vector<Result> result;
-    vector<int> set;
+//    vector<int> set;
+    //TODO
     for (int i = 0; i < 10; ++i) {
         reset();
         // 顾不了那么多格式了
@@ -371,50 +496,54 @@ int run_case(const string &file_name) {
         // 运行
         run();
         // 结束计时
-        time_t end = clock();
+
         // linux下得到的是微秒us，除以1000得到ms
-        time_t used = (end - start) / 1000;
+        time_t used = (end_t - start) / 1000;
         cout << "End running for " << i + 1 << "th time\n";
-        cout << "time using: " << used << "ms\n";
-        // 清空set
-        set.clear();
-        for (int j = 0; j < v_count; ++j) {
-            if (is_in_set[j]) {
-                set.push_back(j);
-            }
-        }
-        // 插入到后面
-        result.emplace_back(set, used, get_cost());
+        cout << "Time using: " << used << "ms\n";
+//        printf("In descend / in rand = %lu\n", in_descend / in_rand);
+//        printf("Iters: %lu\n", current_iter);
+//        printf("Best cost: %.2f\n", best_cost);
+//        printf("Get_cost(): %.2f\n", get_cost());
+        cout << "Best cost: " << best_cost << "\n";
+        // cout << "Get_cost(): " << get_cost() << "\n";
+        // 排序，加入到result里面
+        sort(best.begin(), best.end());
+        result.emplace_back(best, used, get_cost());
     }
 
     // 输出到文件
-    print_to_file(result, file_name + ".out");
+    print_to_file(result, file_name + ".out.txt");
 }
 
 // 每次直接测试所有的
+// 还是加参数吧，0表示测试文件列表，1表示直接测试数据
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
+    if (argc < 3) {
         cerr << "Two few parameters\n";
         exit(EXIT_FAILURE);
     }
-
-    string file_name = argv[1];
-    fstream in;
-    in.open(file_name, ios_base::in);
-    // 检测打开状态
-    if (!in.good()) {
-        cerr << "Open " + file_name + " error!\n";
-        exit(EXIT_FAILURE);
-    }
-    // 输入样例个数
-    int case_count = 0;
-    in >> case_count;
-    // 测试
-    for (int i = 0; i < case_count; ++i) {
-        in >> file_name;
-        cout << i + 1 << " running " + file_name + ":\n";
-        run_case(file_name);
-        cout << "\n";
+    if (argv[1] == "0") {
+        string file_name = argv[2];
+        fstream in;
+        in.open(file_name, ios_base::in);
+        // 检测打开状态
+        if (!in.good()) {
+            cerr << "Open " + file_name + " error!\n";
+            exit(EXIT_FAILURE);
+        }
+        // 输入样例个数
+        int case_count = 0;
+        in >> case_count;
+        // 测试
+        for (int i = 0; i < case_count; ++i) {
+            in >> file_name;
+            cout << i + 1 << " running " + file_name + ":\n";
+            run_case(file_name);
+            cout << "\n";
+        }
+    } else {
+        run_case(argv[2]);
     }
 
     return 0;
