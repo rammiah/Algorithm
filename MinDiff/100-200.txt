@@ -1,0 +1,9 @@
+8
+SOM-b_1_n100_m10.txt
+SOM-b_2_n100_m20.txt
+SOM-b_3_n100_m30.txt
+SOM-b_4_n100_m40.txt
+SOM-b_5_n200_m20.txt
+SOM-b_6_n200_m40.txt
+SOM-b_7_n200_m60.txt
+SOM-b_8_n200_m80.txt

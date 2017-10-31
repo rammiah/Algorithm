@@ -1,0 +1,5 @@
+4
+SOM-b_9_n300_m30.txt
+SOM-b_10_n300_m60.txt
+SOM-b_11_n300_m90.txt
+SOM-b_12_n300_m120.txt
