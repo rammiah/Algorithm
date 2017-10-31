@@ -33,9 +33,22 @@ vector<int> v_in_set; // 存放在集合中的顶点
 vector<int> v_out_set; // 存放不在其中的顶点
 // 扰动所用变量
 size_t current_iter = 0;
-vector<size_t> taboo;
+// vector<size_t> taboo;
 float best_cost = FLOAT_MAX;
-vector<int> best;
+vector<int> best; // 存放最佳的结果
+// vector<int> temp_best;
+
+// 用于get_cost计算
+// vector<float> temp_delta;
+
+// 设置此空间保存random前的状态
+namespace before_cond {
+    vector<float> delta;
+    vector<int> v_in_set, v_out_set;
+    vector<bool> is_in_set;
+    // vector<int> best;// best直接全局，不记录
+    float current_cost;
+}
 
 clock_t end_t;
 
@@ -48,11 +61,19 @@ void input_graph(const string &file_name) {
     input >> v_count >> require_size;
     // 得到图
     graph = std::vector<vector<float>>(v_count, vector<float>(v_count, 0));
-    is_in_set = vector<bool>(v_count, false);
-    delta = vector<float>(v_count, 0);
-    // 在swap里用于保存点
-    v_in_set = vector<int>(require_size, -1);
-    v_out_set = vector<int>(v_count - require_size, -1);
+    // 计算时主要操作的几个vector
+    is_in_set.resize(v_count, false);
+    delta.resize(v_count, 0);
+    v_in_set.resize(require_size);
+    v_out_set.resize(v_count - require_size);
+    best.resize(require_size);
+    // 对暂存状态初始化
+    // before_cond::delta.resize();
+    before_cond::v_in_set.resize(require_size);
+    before_cond::v_out_set.resize(v_count - require_size);
+    // before_cond::best.resize(require_size);
+    before_cond::delta.resize(v_count);
+    before_cond::is_in_set.resize(v_count);
 
     int from, to;
     // 距离
@@ -68,7 +89,15 @@ void input_graph(const string &file_name) {
     input.close();
 }
 
-bool add_to_set(size_t v) {
+template<typename T>
+void copy(const vector<T> &src, vector<T> &dst) {
+    int len = src.size();
+    for (int i = 0; i < len; ++i) {
+        dst[i] = src[i];
+    }
+}
+
+bool add_to_set(const size_t &v) {
     // 不合理就判错
     if (is_in_set[v]) {
         cerr << "Error: " << v << " should not in set.\n";
@@ -117,7 +146,7 @@ float get_cost() {
 }
 
 
-bool remove_from_set(size_t v) {
+bool remove_from_set(const size_t &v) {
     if (!is_in_set[v]) {
         cerr << "Error: " << v << " should in set.\n";
         return false;
@@ -139,7 +168,7 @@ bool remove_from_set(size_t v) {
 }
 
 // 此处用于贪心插入顶点用
-float get_after_add_cost(int v_to_in) {
+float get_after_add_cost(const int &v_to_in) {
     float v_delta = 0;
     float max_delta = 0, min_delta = FLOAT_MAX;
     float temp_delta = 0;
@@ -193,7 +222,7 @@ void printSet() {
     cout << endl;
     cout << "cost: " << current_cost << endl;
     cout << "get_cost(): " << get_cost() << endl;
-    get_cost();
+    // get_cost();
     int out_count = 0;
     // 得到的set
     for (int i = 0; i < v_count; ++i) {
@@ -214,7 +243,7 @@ void printSet() {
 void get_init_sol() {
     // 随机加入一个
     add_to_set(rand() % v_count);
-    int min_v = 0;
+    // int min_v = 0;
     float min_cost, temp_cost = 0;
     vector<int> all_best;
     // 贪心算法加入剩余的点
@@ -242,9 +271,9 @@ void get_init_sol() {
         }
         // 随机选择加入
         add_to_set(static_cast<size_t>(all_best[rand() % all_best.size()]));
-        // 把cost更新一下
-        current_cost = min_cost;
     }
+    // 把cost更新一下       
+    current_cost = min_cost;
 }
 
 //// std::swap居然不让用
@@ -260,7 +289,7 @@ clock_t in_descend = 0;
 
 // 对当前进行持续优化的函数
 void descend() {
-    clock_t s = clock();
+    // clock_t s = clock();
     // 是否提升的一个flag
     bool improved = true;
     // 提升的值，已有最大和当前点
@@ -308,11 +337,13 @@ void descend() {
     }
 
     if (current_cost < best_cost) {
-        best = v_in_set;
+        // best = v_in_set;
+        // 拷贝到best里面，直接调用复制构造太慢了
+        copy(v_in_set, best);
         best_cost = current_cost;
         end_t = clock();
     }
-    in_descend += clock() - s;
+    // in_descend += clock() - s;
 }
 
 
@@ -354,46 +385,64 @@ float get_swap_cost(const size_t &v_in_i, const size_t &v_out_i) {
     return max_delta - min_delta;
 }
 
-// clock_t s = 0;
-// clock_t e = 0;
-clock_t in_rand = 0;
+//namespace before_cond{
+//     vector<float> delta;
+//     vector<int>v_in_set, v_out_set;
+//     vector<bool> is_in_set;
+//     vector<int> best;
+//     float current_cost;
+// }
+
+// 保存状态
+void save() {
+    copy(delta, before_cond::delta);
+    copy(v_in_set, before_cond::v_in_set);
+    copy(v_out_set, before_cond::v_out_set);
+    copy(is_in_set, before_cond::is_in_set);
+    before_cond::current_cost = current_cost;
+}
+
+// 恢复状态
+void recover() {
+    copy(before_cond::delta, delta);
+    copy(before_cond::v_in_set, v_in_set);
+    copy(before_cond::v_out_set, v_out_set);
+    copy(before_cond::is_in_set, is_in_set);
+    current_cost = before_cond::current_cost;
+}
 
 // 随机扰动
 void randomed(const size_t &iters) {
-    clock_t s = clock();
     size_t to_out = 0, to_in = 0;
-    // 循环iters次
-    for (int i = 0; i < iters; ++i) {
-        // to_out可以直接随机选
-        to_out = rand() % require_size;
-        // 寻找一个未被禁忌的定点
-//        do {
-//            to_in = static_cast<int>(rand() % (v_count - require_size));
-//        } while (taboo[to_in] < current_iter);
-        to_in = rand() % (v_count - require_size);
-
-        // 计算cost
-        float cost = get_swap_cost(to_out, to_in);
-        // 删除、加入
-        remove_from_set(static_cast<size_t>(v_in_set[to_out]));
-        add_to_set(static_cast<size_t>(v_out_set[to_in]));
-        me::swap(v_in_set[to_out], v_out_set[to_in]);
-        // 更新变量
-        current_cost += cost;
+    int t = 0;
+    int nbrs = static_cast<int>(0.2 * require_size);
+    while (t < iters) {
+        for (int j = 0; j < nbrs; ++j) {
+            // to_out可以直接随机选
+            to_out = rand() % require_size;
+            to_in = rand() % (v_count - require_size);
+            // 计算cost
+            float cost = get_swap_cost(to_out, to_in);
+            // 删除、加入
+            remove_from_set(static_cast<size_t>(v_in_set[to_out]));
+            add_to_set(static_cast<size_t>(v_out_set[to_in]));
+            me::swap(v_in_set[to_out], v_out_set[to_in]);
+            // 更新cost
+            current_cost += cost;
+        }
+        // 下降
+        descend();
+        // 如果改进了那么做出的改变不进行恢复
         if (current_cost < best_cost) {
-            best = v_in_set;
+            copy(v_in_set, best);
+  //          save();
             best_cost = current_cost;
+            t = 0;
             end_t = clock();
+        } else {
+            t++;
         }
     }
-    in_rand += clock() - s;
-    // clock_t a = clock();
-    ++current_iter;
-//    descend();
-    // if (current_iter % 4 == 0) {
-    descend();
-    // }
-//    cout << "Current cost: " << setprecision(2) << current_cost << "\n";
 }
 
 // 对运算的一个封装吧
@@ -410,9 +459,13 @@ void run() {
     descend();
 
     clock_t start = clock();
-    // 单位为us
-    while (clock() < start + v_count * SECOND / 10) {
-        randomed(require_size / 4);
+    // stop单位为us
+    clock_t stop = static_cast<clock_t>(start + v_count * SECOND);
+    save();
+    while (clock() < stop) {
+        // 恢复已知最好状态
+//        recover();
+        randomed(10);
     }
 }
 
@@ -472,7 +525,7 @@ void reset() {
     current_cost = 0;
     best_cost = FLOAT_MAX;
     current_iter = 0;
-    in_rand = in_descend = 0;
+    // in_rand = in_descend = 0;
     for (int i = 0; i < v_count; ++i) {
         is_in_set[i] = false;
         delta[i] = 0;
@@ -480,7 +533,7 @@ void reset() {
 }
 
 // 封装
-int run_case(const string &file_name) {
+void run_case(const string &file_name) {
     // 输入图。每次内存都会自动分配
     input_graph(file_name);
     vector<Result> result;
@@ -501,12 +554,7 @@ int run_case(const string &file_name) {
         time_t used = (end_t - start) / 1000;
         cout << "End running for " << i + 1 << "th time\n";
         cout << "Time using: " << used << "ms\n";
-//        printf("In descend / in rand = %lu\n", in_descend / in_rand);
-//        printf("Iters: %lu\n", current_iter);
-//        printf("Best cost: %.2f\n", best_cost);
-//        printf("Get_cost(): %.2f\n", get_cost());
         cout << "Best cost: " << best_cost << "\n";
-        // cout << "Get_cost(): " << get_cost() << "\n";
         // 排序，加入到result里面
         sort(best.begin(), best.end());
         result.emplace_back(best, used, get_cost());
@@ -523,7 +571,8 @@ int main(int argc, char *argv[]) {
         cerr << "Two few parameters\n";
         exit(EXIT_FAILURE);
     }
-    if (argv[1] == "0") {
+    string s(argv[1]);
+    if (s == "0") {
         string file_name = argv[2];
         fstream in;
         in.open(file_name, ios_base::in);
