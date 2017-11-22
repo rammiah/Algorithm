@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <cmath>
+#include <float.h>
 
 using namespace std;
 // 从Java里得到的32bit float最大值
@@ -37,7 +38,8 @@ size_t current_iter = 0;
 float best_cost = FLOAT_MAX;
 vector<int> best; // 存放最佳的结果
 // vector<int> temp_best;
-
+vector<int> taboo;
+const float taboo_rate = 0.1;
 // 用于get_cost计算
 // vector<float> temp_delta;
 
@@ -67,6 +69,7 @@ void input_graph(const string &file_name) {
     v_in_set.resize(require_size);
     v_out_set.resize(v_count - require_size);
     best.resize(require_size);
+    taboo.resize(v_count, 0);
     // 对暂存状态初始化
     // before_cond::delta.resize();
     before_cond::v_in_set.resize(require_size);
@@ -258,7 +261,6 @@ void get_init_sol() {
                 temp_cost = get_after_add_cost(i);
                 if (temp_cost < min_cost) {
                     // 如果可以更小就更新min_v
-//                    min_v = i;
                     min_cost = temp_cost;
                     // 如果当前的最小将all清空
                     all_best.clear();
@@ -346,20 +348,52 @@ void descend() {
     // in_descend += clock() - s;
 }
 
-
 // 定向扰动
 //TODO
-void directed() {
-    // 先将顶点分开
-    int in = 0, out = 0;
-    for (int i = 0; i < v_count; ++i) {
-        if (is_in_set[i]) {
-            v_in_set[in++] = i;
-        } else {
-            v_out_set[out++] = i;
-        }
-    }
+bool directed(const int &iters) {
     // 定向扰动
+    int t = 0;
+    float tmp_cost = 0;
+    float best_desc = 0;
+    vector<pair<int, int>> can_swap;
+
+    bool improved = false;
+
+    while (t < iters) {
+        for (int i = 0; i < require_size; ++i) {
+            for (int j = 0; j < v_count - require_size; ++j) {
+                tmp_cost = swap_cost_if_descend(i, j);
+                if (tmp_cost < best_desc) {
+                    best_desc = tmp_cost;
+                    can_swap.clear();
+                    can_swap.push_back(make_pair(i, j));
+                } else if (tmp_cost == best_cost) {
+                    can_swap.push_back(make_pair(i, j));
+                }
+            }
+        }
+
+        if (can_swap.size() > 0) {
+            improved = true;
+            t = 0;
+            int _rand = rand() % can_swap.size();
+            add_to_set(v_out_set[can_swap[_rand].second]);
+            remove_from_set(v_in_set[can_swap[_rand].first]);
+            taboo[v_in_set[can_swap[_rand].first]] = current_iter + rand() % static_cast<int>(require_size * taboo_rate); 
+            current_cost += best_desc;
+            me::swap(v_in_set[can_swap[_rand].first], v_out_set[can_swap[_rand].second]);
+            end_t = clock();
+            if (current_cost < best_cost) {
+                copy(v_in_set, best);
+                best_cost = current_cost;
+            }
+        } else {
+            ++t;
+        }
+        ++current_iter;
+    }
+
+    return improved;
 }
 
 // 求交换的cost，就算cost为正也不终止，用于randomed或者directed
@@ -412,37 +446,49 @@ void recover() {
 }
 
 // 随机扰动
-void randomed(const size_t &iters) {
+bool randomed(const size_t &iters) {
     size_t to_out = 0, to_in = 0;
     int t = 0;
-    int nbrs = static_cast<int>(0.2 * require_size);
+    int nbrs = static_cast<int>(0.1 * require_size);
+
+    bool improved = false;
+
     while (t < iters) {
         for (int j = 0; j < nbrs; ++j) {
             // to_out可以直接随机选
+            // 获取没有被禁忌的两个点
             to_out = rand() % require_size;
             to_in = rand() % (v_count - require_size);
+            // while (taboo[to_in] >= current_iter && get_swap_cost(to_out, to_in) + current_cost > best_cost) {
+                // to_in = rand() % (v_count - require_size);
+                // if (taboo[to_in] >= current_iter && get_swap_cost(to_out, to_in) + current_cost > best_cost) {
+                //     t++;
+                //     continue;
+                // }
+            // }
             // 计算cost
             float cost = get_swap_cost(to_out, to_in);
             // 删除、加入
             remove_from_set(static_cast<size_t>(v_in_set[to_out]));
             add_to_set(static_cast<size_t>(v_out_set[to_in]));
             me::swap(v_in_set[to_out], v_out_set[to_in]);
+            taboo[v_out_set[to_out]] = current_iter + rand() % static_cast<int>(require_size * taboo_rate);
             // 更新cost
             current_cost += cost;
-        }
-        // 下降
-        descend();
-        // 如果改进了那么做出的改变不进行恢复
-        if (current_cost < best_cost) {
-            copy(v_in_set, best);
-  //          save();
-            best_cost = current_cost;
-            t = 0;
-            end_t = clock();
-        } else {
-            t++;
+            if (current_cost < best_cost) {
+                improved = true;
+                copy(v_in_set, best);
+                best_cost = current_cost;
+                t = 0;
+                end_t = clock();
+            } else {
+                t++;
+            }
+            ++current_iter;
         }
     }
+
+    return improved;
 }
 
 // 对运算的一个封装吧
@@ -460,12 +506,16 @@ void run() {
 
     clock_t start = clock();
     // stop单位为us
-    clock_t stop = static_cast<clock_t>(start + v_count * SECOND);
-    save();
+    clock_t stop = static_cast<clock_t>(start + v_count * SECOND * 0.1);
+    // save();
+    // int local_optim = 0;
     while (clock() < stop) {
-        // 恢复已知最好状态
-//        recover();
-        randomed(10);
+        if (current_iter % 100 == 0) {
+            directed(10);
+        } else {
+            randomed(10);
+            descend();
+        }
     }
 }
 
@@ -473,9 +523,6 @@ void run() {
 void print_to_file(const vector<Result> &result, const string &file_name) {
     fstream out;
     out.open(file_name, ios_base::out);
-//    out << require_size << "\n\n";
-    // 写入文件
-    // 先输出所有的
     out << "all result:\n";
     for (auto &item : result) {
         out << "v in set: ";
@@ -529,6 +576,7 @@ void reset() {
     for (int i = 0; i < v_count; ++i) {
         is_in_set[i] = false;
         delta[i] = 0;
+        taboo[i] = 0;
     }
 }
 
@@ -537,8 +585,7 @@ void run_case(const string &file_name) {
     // 输入图。每次内存都会自动分配
     input_graph(file_name);
     vector<Result> result;
-//    vector<int> set;
-    //TODO
+
     for (int i = 0; i < 10; ++i) {
         reset();
         // 顾不了那么多格式了
@@ -548,8 +595,6 @@ void run_case(const string &file_name) {
         time_t start = clock();
         // 运行
         run();
-        // 结束计时
-
         // linux下得到的是微秒us，除以1000得到ms
         time_t used = (end_t - start) / 1000;
         cout << "End running for " << i + 1 << "th time\n";
