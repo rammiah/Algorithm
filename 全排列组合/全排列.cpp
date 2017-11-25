@@ -43,7 +43,7 @@ bool next(std::vector<int> &v){
 
 int main(int argc, char *argv[]) {
     // 初始化变量
-    std::vector<int> v{1, 2, 3, 4, 5};
+    std::vector<int> v{1, 2, 3, 4};
     // 输出当前序列
     std::for_each(std::cbegin(v), std::cend(v), [](const int &t){std::cout << t << "";});
     std::cout << "\n";
