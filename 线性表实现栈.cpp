@@ -43,7 +43,7 @@ int Pop(const Nodep head) {
 		last = last->next;
 	}
 	if (temp == head) {
-		printf("\n¿Õ±íÎŞ·¨µ¯³öÔªËØ£¡");
+		printf("\nç©ºè¡¨æ— æ³•å¼¹å‡ºå…ƒç´ ï¼");
 		return -1;
 	}
 	data = last->data;
