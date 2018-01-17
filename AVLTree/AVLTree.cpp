@@ -1,4 +1,7 @@
 #include <iostream>
+#include <ctime>
+#include <cstdlib>
+#include <algorithm>
 
 template<typename T>
 class BST {
@@ -10,26 +13,26 @@ class BST {
         Node *right = nullptr;
 
         explicit Node(const T &value) :
-                value(value) {}
+            value(value) {}
     };
 
     Node *root = nullptr;
-    int getHeight(Node *&node) {
+    int getHeight(Node *node) {
         if (node == nullptr) return 0;
         return node->height;
     }
 
     void RRotate(Node *&node) {
-		// 这个函数保证传入的node和node->left不为空
+        // 这个函数保证传入的node和node->left不为空
         Node *left = node->left;
         node->left = left->right;
         left->right = node;
         node = left;
-		// 先获取下方结点的高度，最后处理node
-		Node *right = node->right;
-		// 此函数中只有这两个的高度应该修改一下
-		right->height = std::max(getHeight(right->left), getHeight(right->right)) + 1;
-		node->height = std::max(getHeight(node->left), getHeight(node->right)) + 1;
+        // 先获取下方结点的高度，最后处理node
+        Node *right = node->right;
+        // 此函数中只有这两个的高度应该修改一下
+        right->height = std::max(getHeight(right->left), getHeight(right->right)) + 1;
+        node->height = std::max(getHeight(node->left), getHeight(node->right)) + 1;
     }
 
     void LRotate(Node *&node) {
@@ -37,30 +40,30 @@ class BST {
         node->right = right->left;
         right->left = node;
         node = right;
-		// 
-		Node *left = node->left;
-		left->height = std::max(getHeight(left->left), getHeight(left->right)) + 1;
-		node->height = std::max(getHeight(node->left), getHeight(node->right)) + 1;
+        Node *left = node->left;
+        left->height = std::max(getHeight(left->left), getHeight(left->right)) + 1;
+        node->height = std::max(getHeight(node->left), getHeight(node->right)) + 1;
     }
 
     bool insert(const T &value, Node *&node) {
-		// 空结点直接上，高度默认为1
-		if (node == nullptr) {
+        // 空结点直接上，高度默认为1
+        if (node == nullptr) {
             node = new Node(value);
             return true;
         }
-
         // 得到插入结果的
-		bool result = false;
+        bool result = false;
         if (value > node->value) {
             result = insert(value, node->right);
-        } else if (value < node->value) {
+        }
+        else if (value < node->value) {
             result = insert(value, node->left);
-        } else {
+        }
+        else {
             return false;
         }
-		// 插入失败直接返回false，不需要调整高度
-		if (!result) return false;
+        // 插入失败直接返回false，不需要调整高度
+        if (!result) return false;
         // 得到左右高度，判断是否失衡
         int left_height = getHeight(node->left);
         int right_height = getHeight(node->right);
@@ -69,29 +72,31 @@ class BST {
             // 插到左左，想右转
             if (value < node->left->value) {
                 RRotate(node);
-            } else {
+            }
+            else {
                 // 先左后右
                 // LRRotate(node);
                 LRotate(node->left);
                 RRotate(node);
             }
-        } else
-            // 右边比左边高两个
-        if (left_height - right_height == -2) {
-            if (value > node->right->value) {
-                // 插到右右，往左边转一下就行了
-                LRotate(node);
-            } else {
-                // 先右后左
-                // RLRotate(node);
-                RRotate(node->right);
-                LRotate(node);
-            }
         }
-		// 旋转后才可能到这里？
+        else
+            // 右边比左边高两个
+            if (left_height - right_height == -2) {
+                if (value > node->right->value) {
+                    // 插到右右，往左边转一下就行了
+                    LRotate(node);
+                }
+                else {
+                    // 先右后左
+                    RRotate(node->right);
+                    LRotate(node);
+                }
+            }
+        // 旋转后才可能到这里？
         // 改进一下调整高度的函数
-		// 在函数最后获取一下当前的结点的应有高度
-		// 没有旋转也需要调整高度
+        // 在函数最后获取一下当前的结点的应有高度
+        // 没有旋转也需要调整高度
         node->height = std::max(getHeight(node->left), getHeight(node->right)) + 1;
 
         return true;
@@ -163,20 +168,23 @@ public:
 
 
 int main() {
-	// 测试函数
-    for (int j = 0; j < 100; ++j) {
+    // 测试函数
+    for (int j = 0; j < 10; ++j) {
         std::cout << j + 1 << "th test:\n";
         BST<size_t> tree{};
         srand(clock());
-        int size = 100;
+        int size = 1000000;
         for (int i = 0; i < size; ++i) {
-            tree.insert(static_cast<const size_t>(random() % 1024));
+            tree.insert(static_cast<const size_t>(rand() % 1024));
         }
-        std::cout << "Tree is balance ? " << tree.isBalance() << "\n";
+        std::cout << "Tree is balance: " << (tree.isBalance() ? "true" : "false") << "\n";
         // 释放空间
-        tree.printLastLevel();
+        //tree.free();
+        //tree.printLastLevel();
     }
 
+    int s = 0;
+    std::cin >> s;
 
     return 0;
 }
