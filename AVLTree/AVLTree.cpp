@@ -14,23 +14,6 @@ class BST {
     };
 
     Node *root = nullptr;
-
-    // void adjHeight(Node *node) {
-    //     if (node == nullptr) {
-    //         return;
-    //     }
-
-    //     if (node->left == nullptr && node->right == nullptr) {
-    //         node->height = 1;
-    //     } else if (node->left == nullptr) {
-    //         adjHeight(node->right);
-    //         node->height = node->right->height + 1;
-    //     } else if (node->right == nullptr) {
-    //         adjHeight(node->left);
-    //         node->height = node->left->height + 1;
-    //     }
-    // }
-
     int getHeight(Node *&node) {
         if (node == nullptr) return 0;
         return node->height;
@@ -59,18 +42,6 @@ class BST {
 		left->height = std::max(getHeight(left->left), getHeight(left->right)) + 1;
 		node->height = std::max(getHeight(node->left), getHeight(node->right)) + 1;
     }
-
-  //   void LRRotate(Node *&node) {
-		// // 这个函数是调用上面的两个，不需要考虑高度问题
-  //       LRotate(node->left);
-  //       RRotate(node);
-  //   }
-
-  //   void RLRotate(Node *&node) {
-		// // 同上
-  //       RRotate(node->right);
-  //       LRotate(node);
-  //   }
 
     bool insert(const T &value, Node *&node) {
 		// 空结点直接上，高度默认为1
@@ -144,6 +115,28 @@ class BST {
         }
     }
 
+    bool isBalance(const Node *node) {
+        if (node == nullptr) return true;
+        int left = getHeight(node->left);
+        int right = getHeight(node->right);
+        if (isBalance(node->left) && isBalance(node->right)) {
+            return std::abs(left - right) < 2;
+        }
+        return false;
+    }
+
+    void printLastLevel(Node *&node, int depth) {
+        if (node == nullptr) return;
+
+        if (node->left == nullptr && node->right == nullptr) {
+            std::cout << depth << " ";
+            return;
+        }
+
+        printLastLevel(node->left, depth + 1);
+        printLastLevel(node->right, depth + 1);
+    }
+
 public:
     // 释放空间函数
     void free() {
@@ -157,6 +150,15 @@ public:
     void inOrder() const {
         InOrder(root);
     }
+
+    bool isBalance() {
+        return isBalance(root);
+    }
+
+    void printLastLevel() {
+        int depth = 0;
+        printLastLevel(root, 1);
+    }
 };
 
 
@@ -166,12 +168,13 @@ int main() {
         std::cout << j + 1 << "th test:\n";
         BST<size_t> tree{};
         srand(clock());
-        int size = 1000000;
+        int size = 100;
         for (int i = 0; i < size; ++i) {
             tree.insert(static_cast<const size_t>(random() % 1024));
         }
-        std::cout << "Tree is balance ? " << tree.balance() << "\n";
-//        tree.inOrder();
+        std::cout << "Tree is balance ? " << tree.isBalance() << "\n";
+        // 释放空间
+        tree.printLastLevel();
     }
 
 
