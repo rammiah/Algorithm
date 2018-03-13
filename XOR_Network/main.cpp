@@ -4,36 +4,33 @@
 int main() {
 //    std::cout << "Hello, World!" << std::endl;
     BPNet testNet;
-    vector<double> sampleInput[4];
-    vector<double> sampleOutput[4];
+    vector<Sample> sampleInOut(8);
     // 0 ^ 0 = 0
-    sampleInput[0].push_back(0);
-    sampleInput[0].push_back(0);
-    sampleOutput[0].push_back(0);
+    sampleInOut[0].in.push_back(0);
+    sampleInOut[0].in.push_back(0);
+    sampleInOut[0].out.push_back(0);
     // 0 ^ 1 = 0
-    sampleInput[1].push_back(0);
-    sampleInput[1].push_back(1);
-    sampleOutput[1].push_back(1);
+    sampleInOut[1].in.push_back(0);
+    sampleInOut[1].in.push_back(1);
+    sampleInOut[1].out.push_back(1);
     // 1 ^ 0 = 1
-    sampleInput[2].push_back(1);
-    sampleInput[2].push_back(0);
-    sampleOutput[2].push_back(1);
+    sampleInOut[2].in.push_back(1);
+    sampleInOut[2].in.push_back(0);
+    sampleInOut[2].out.push_back(1);
     // 1 ^ 1 = 1
-    sampleInput[3].push_back(1);
-    sampleInput[3].push_back(1);
-    sampleOutput[3].push_back(0);
-    // 测试
-    vector<Sample> sampleInOut(4);
-    for (int i = 0; i < 4; ++i) {
-        sampleInOut[i].in = sampleInput[i];
-        sampleInOut[i].out = sampleOutput[i];
-    }
-
+    sampleInOut[3].in.push_back(1);
+    sampleInOut[3].in.push_back(1);
+    sampleInOut[3].out.push_back(0);
+    sampleInOut[4] = sampleInOut[0];
+    sampleInOut[5] = sampleInOut[1];
+    sampleInOut[6] = sampleInOut[2];
+    sampleInOut[7] = sampleInOut[3];
+    // 训练
     testNet.train(sampleInOut, 0.0002);
-
+    // 测试
     vector<Sample> testGroup(4);
     testGroup[0].in.push_back(0.1);
-    testGroup[0].in.push_back(0.2);
+    testGroup[0].in.push_back(0.1);
 
     testGroup[1].in.push_back(0.15);
     testGroup[1].in.push_back(0.9);

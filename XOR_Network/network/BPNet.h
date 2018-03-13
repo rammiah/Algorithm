@@ -19,7 +19,7 @@ using namespace std;
 #define HIDE_NODE_CNT 4 // 隐含节点数
 #define HIDE_LAYER_CNT 1 // 隐含层数
 #define OUT_NODE_CNT 1 // 输出节点数
-#define LEARN_RATE 0.9 // 学习速率
+#define LEARN_RATE 10 // 学习速率
 
 
 inline double get_11Random() {
@@ -37,11 +37,11 @@ struct InputNode {
 };
 
 struct OutputNode {
-    double value, delta, rightout, bias, bDeltaSum;
+    double value, delta, rightout, bias, deltaSum;
 };
 
 struct HiddenNode {
-    double value, delta, bias, bDeltaSum;
+    double value, delta, bias, deltaSum;
     vector<double> weight, wDeltaSum;
 };
 
@@ -54,6 +54,7 @@ public:
     BPNet();
     void forwardPropagationEpoc();
     void backPropagationEpoc();
+    void update_bias_weight(int dataSize);
 
     void train(vector<Sample> &sampleGroup, double threshold);
     void predict(vector<Sample> &testGroup);
@@ -67,7 +68,5 @@ public:
     OutputNode *outputLayer[OUT_NODE_CNT];
     HiddenNode *hiddenLayer[HIDE_LAYER_CNT][HIDE_NODE_CNT];
 };
-
-
 
 #endif //NEUTRALNETWORK_BPNET_H
