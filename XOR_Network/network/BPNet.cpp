@@ -122,12 +122,12 @@ void BPNet::backPropagationEpoc() {
             for (int j = 0; j < HIDE_NODE_CNT; ++j) {
                 double sum = 0;
                 for (int k = 0; k < HIDE_NODE_CNT; ++k) {
-                    sum += hiddenLayer[i + 1][j]->delta * hiddenLayer[i][j]->weight[k];
+                    sum += hiddenLayer[i + 1][k]->delta * hiddenLayer[i][j]->weight[k];
                 }
                 hiddenLayer[i][j]->delta = sum * (1 - hiddenLayer[i][j]->value) * hiddenLayer[i][j]->value;
                 hiddenLayer[i][j]->deltaSum += hiddenLayer[i][j]->delta;
                 for (int k = 0; k < HIDE_NODE_CNT; ++k) {
-                    hiddenLayer[i][j]->wDeltaSum[k] += hiddenLayer[i][j]->value * hiddenLayer[i + 1][j]->delta;
+                    hiddenLayer[i][j]->wDeltaSum[k] += hiddenLayer[i][j]->value * hiddenLayer[i + 1][k]->delta;
                 }
             }
         }
