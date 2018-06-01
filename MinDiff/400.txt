@@ -1,5 +1,0 @@
-4
-SOM-b_13_n400_m40.txt
-SOM-b_14_n400_m80.txt
-SOM-b_15_n400_m120.txt
-SOM-b_16_n400_m160.txt

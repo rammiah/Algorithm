@@ -1,5 +1,0 @@
-4
-SOM-b_17_n500_m50.txt
-SOM-b_18_n500_m100.txt
-SOM-b_19_n500_m150.txt
-SOM-b_20_n500_m200.txt
