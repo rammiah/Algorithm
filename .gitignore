@@ -285,3 +285,4 @@ java_src/*
 
 # vscode config
 .vscode/
+.DS_Store
