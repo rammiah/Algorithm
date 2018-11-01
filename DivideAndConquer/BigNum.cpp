@@ -1,4 +1,3 @@
-
 #define _CRT_SECURE_NO_WARNINGS
 
 #include <vector>
@@ -16,6 +15,7 @@
 #include <cfloat>
 #include <cstdarg>
 #include <cctype>
+#include <cassert>
 
 using namespace std;
 
@@ -97,23 +97,24 @@ bool bigger(const string &a, const string &b) {
     return a >= b;
 }
 
-string mul(const string &a, const string &b) {
+string mul(const string &a_num, const string &b_num) {
+    string a_cpy = a_num, b_cpy = b_num;
     // 请确保参数都为非负数，我的函数会去除首部的零
-    if (a.length() == 0 || b.length() == 0 || a == "0" || b == "0") {
+    if (a_cpy.length() == 0 || b_cpy.length() == 0 || a_cpy == "0" || b_cpy == "0") {
         return "0";
     }
     // 两者都为有效的数字
-    int len_a = a.length(), len_b = b.length();
+    int len_a = a_cpy.length(), len_b = b_cpy.length();
     // 如果其中有一个的位数已经小于等于2位了
     if (len_a <= 2 && len_b <= 2) {
-        return to_string(stoi(a) * stoi(b));
+        return to_string(stoi(a_cpy) * stoi(b_cpy));
     } else if (len_a <= 2) {
         // 只需要将b分开
-        string b1 = b.substr(0, len_b / 2);
-        string b0 = b.substr(len_b / 2);
+        string b1 = b_cpy.substr(0, len_b / 2);
+        string b0 = b_cpy.substr(len_b / 2);
         // 后面需要加len_b - len_b / 2个0
-        b1 = mul(b1, a);
-        b0 = mul(b0, a);
+        b1 = mul(b1, a_cpy);
+        b0 = mul(b0, a_cpy);
         add_zero(b1, len_b - len_b / 2);
         string res = add(b1, b0);
         remove_zero(res); // 去除前置0
@@ -121,11 +122,11 @@ string mul(const string &a, const string &b) {
     } else if (len_b <= 2) {
         // 将a分开
         // 只需要将b分开
-        string a1 = a.substr(0, len_a / 2);
-        string a0 = a.substr(len_a / 2);
+        string a1 = a_cpy.substr(0, len_a / 2);
+        string a0 = a_cpy.substr(len_a / 2);
         // 后面需要加len_a - len_a / 2 个0
-        a1 = mul(a1, b);
-        a0 = mul(a0, b);
+        a1 = mul(a1, b_cpy);
+        a0 = mul(a0, b_cpy);
         add_zero(a1, len_a - len_a / 2);
         string res = add(a1, a0);
         remove_zero(res);
@@ -135,119 +136,63 @@ string mul(const string &a, const string &b) {
     // 我的程序存储的高位在前面
     // 两者想要继续计算需要AD BC的阶数相同，不然不能使用这个算法
     // 阶数定为与较大的相同
-    if (len_a > len_b) {
-        // 高位部分得到的为 len / 2，3是1，4是2，低位是(len + 1) / 2，总是容易计算的
-        if (len_b <= (len_a + 1) / 2) {
-            // b的高位参与运算的将是0
-            string A = a.substr(0, len_a / 2);
-            string B = a.substr(len_a / 2);
-            remove_zero(B);
-            string D = b;
-            string BD = mul(B, D);
-            // 此处讨论B和A的大小
-            if (bigger(B, A)) {
-                string res = sub(BD, mul(sub(B, A), D));
-                add_zero(res, (len_a + 1) / 2);
-                res = add(res, BD);
-                remove_zero(res);
-                return res;
-            } else {
-                string res = add(BD, mul(sub(A, B), D));
-                add_zero(res, (len_a + 1) / 2);
-                res = add(res, BD);
-                remove_zero(res);
-                return res;
-            }
-        } else {
-            string A = a.substr(0, len_a / 2);
-            string B = a.substr(len_a / 2);
-            int len = (len_a + 1) / 2;
-            string C = b.substr(0, len_b - len);
-            string D = b.substr(len_b - len);
-            // 去除B，D的前置0
-            remove_zero(B);
-            remove_zero(D);
-            string AC = mul(A, C);
-            string BD = mul(B, D);
-            string res = AC;
-            // 奇数拓展len_a+1个0，偶数拓展len_a个0
-            add_zero(res, (len_a + 1) / 2 * 2);
-            res = add(res, BD);
-            // 分类讨论A和B，C和D的大小
-            string mid = add(AC, BD);
-            if (bigger(A, B) && bigger(D, C)) {
-                mid = add(mid, mul(sub(A, B), sub(D, C)));
-            } else if (bigger(A, B) && bigger(C, D)) {
-                mid = sub(mid, mul(sub(A, B), sub(C, D)));
-            } else if (bigger(B, A) && bigger(D, C)) {
-                mid = sub(mid, mul(sub(B, A), sub(D, C)));
-            } else {
-                mid = add(mid, mul(sub(B, A), sub(C, D)));
-            }
-            add_zero(mid, (len_a + 1) / 2);
-            res = add(res, mid);
-            remove_zero(res);
-            return res;
-        }
-    } else if (len_a <= len_b) {
-        // 高位部分得到的为 len / 2，3是1，4是2，低位是(len + 1) / 2，总是容易计算的
-        if (len_a <= (len_b + 1) / 2) {
-            // b的高位参与运算的将是0
-            string C = b.substr(0, len_b / 2);
-            string D = b.substr(len_b / 2);
-            remove_zero(D);
-            string B = a;
-            string BD = mul(B, D);
-            // 此处讨论B和A的大小
-            if (bigger(D, C)) {
-                string res = sub(BD, mul(sub(D, C), B));
-                add_zero(res, (len_b + 1) / 2);
-                res = add(res, BD);
-                remove_zero(res);
-                return res;
-            } else {
-                string res = add(BD, mul(sub(C, D), B));
-                add_zero(res, (len_b + 1) / 2);
-                res = add(res, BD);
-                remove_zero(res);
-                return res;
-            }
-        } else {
-            string C = b.substr(0, len_b / 2);
-            string D = b.substr(len_b / 2);
-            int len = (len_b + 1) / 2;
-            string A = a.substr(0, len_a - len);
-            string B = a.substr(len_a - len);
-            // 去除B，D的前置0
-            remove_zero(B);
-            remove_zero(D);
-            string AC = mul(A, C);
-            string BD = mul(B, D);
-            string res = AC;
-            // 奇数拓展len_b+1个0，偶数拓展len_b个0
-            add_zero(res, (len_b + 1) / 2 * 2);
-            res = add(res, BD);
-            // 分类讨论A和B，C和D的大小
-            string mid = add(AC, BD);
-            if (bigger(A, B) && bigger(D, C)) {
-//                cout << __LINE__ << "\n";
-                mid = add(mid, mul(sub(A, B), sub(D, C)));
-            } else if (bigger(A, B) && bigger(C, D)) {
-//                cout << __LINE__ << "\n";
+    if (len_b >= len_a) {
+        swap(len_b, len_a);
+        swap(a_cpy, b_cpy);
+    }
 
-                mid = sub(mid, mul(sub(A, B), sub(C, D)));
-            } else if (bigger(B, A) && bigger(D, C)) {
-//                cout << __LINE__ << "\n";
-                mid = sub(mid, mul(sub(B, A), sub(D, C)));
-            } else {
-//                cout << __LINE__ << "\n";
-                mid = add(mid, mul(sub(B, A), sub(C, D)));
-            }
-            add_zero(mid, (len_b + 1) / 2);
-            res = add(res, mid);
+    // 高位部分得到的为 len / 2，3是1，4是2，低位是(len + 1) / 2，总是容易计算的
+    if (len_b <= (len_a + 1) / 2) {
+        // b的高位参与运算的将是0
+        string A = a_cpy.substr(0, len_a / 2);
+        string B = a_cpy.substr(len_a / 2);
+        remove_zero(B);
+        string D = b_cpy;
+        string BD = mul(B, D);
+        // 此处讨论B和A的大小
+        if (bigger(B, A)) {
+            string res = sub(BD, mul(sub(B, A), D));
+            add_zero(res, (len_a + 1) / 2);
+            res = add(res, BD);
+            remove_zero(res);
+            return res;
+        } else {
+            string res = add(BD, mul(sub(A, B), D));
+            add_zero(res, (len_a + 1) / 2);
+            res = add(res, BD);
             remove_zero(res);
             return res;
         }
+    } else {
+        string A = a_cpy.substr(0, len_a / 2);
+        string B = a_cpy.substr(len_a / 2);
+        int len = (len_a + 1) / 2;
+        string C = b_cpy.substr(0, len_b - len);
+        string D = b_cpy.substr(len_b - len);
+        // 去除B，D的前置0
+        remove_zero(B);
+        remove_zero(D);
+        string AC = mul(A, C);
+        string BD = mul(B, D);
+        string res = AC;
+        // 奇数拓展len_a+1个0，偶数拓展len_a个0
+        add_zero(res, (len_a + 1) / 2 * 2);
+        res = add(res, BD);
+        // 分类讨论A和B，C和D的大小
+        string mid = add(AC, BD);
+        if (bigger(A, B) && bigger(D, C)) {
+            mid = add(mid, mul(sub(A, B), sub(D, C)));
+        } else if (bigger(A, B) && bigger(C, D)) {
+            mid = sub(mid, mul(sub(A, B), sub(C, D)));
+        } else if (bigger(B, A) && bigger(D, C)) {
+            mid = sub(mid, mul(sub(B, A), sub(D, C)));
+        } else {
+            mid = add(mid, mul(sub(B, A), sub(C, D)));
+        }
+        add_zero(mid, (len_a + 1) / 2);
+        res = add(res, mid);
+        remove_zero(res);
+        return res;
     }
 }
 
@@ -388,14 +333,30 @@ public:
 };
 
 int main() {
-    ifstream in("big_num_bench.txt");
+    ifstream in("in.dat");
+    ofstream out("out.dat");
     if (!in.is_open()) {
         return 0;
     }
     BigNum a, b, add_v, sub_v, mul_v;
-    while (in >> a >> b >> add_v >> sub_v >> mul_v) {
-        cout << (a + b == add_v) << (a - b == sub_v) << (a * b == mul_v) << "\n";
+    int op;
+    while (in >> a >> b >> op) {
+        switch (op) {
+            case 1:
+                out << a + b << "\n";
+                break;
+            case 2:
+                out << a - b << "\n";
+                break;
+            case 3:
+                out << a * b << "\n";
+                break;
+            default:
+                break;
+        }
     }
+    in.close();
+    out.close();
 
     return 0;
 }
