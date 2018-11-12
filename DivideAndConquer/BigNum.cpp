@@ -19,189 +19,191 @@
 
 using namespace std;
 
-string add(const string &a, const string &b) {
-    int len_a = a.length(), len_b = b.length();
-    string result;
-    int idx_a = len_a - 1, idx_b = len_b - 1;
-    int carry = 0;
-    while (idx_a >= 0 || idx_b >= 0 || carry > 0) {
-        carry += idx_a >= 0 ? a[idx_a--] - '0' : 0;
-        carry += idx_b >= 0 ? b[idx_b--] - '0' : 0;
-        result.push_back(carry % 10 + '0');
-        carry /= 10;
-    }
-    reverse(result.begin(), result.end());
-    return result;
-}
-
-string sub(const string &a, const string &b) {
-//    cout << a << " " << b << "\n";
-    // 输入请确保a >= b
-    int len_a = a.length(), len_b = b.length();
-    assert(len_a >= len_b);
-    int idx_a = len_a - 1, idx_b = len_b - 1;
-    int carry = 0;
-    string res;
-    while (idx_b >= 0 || carry > 0) {
-        carry += idx_b >= 0 ? b[idx_b--] - '0' : 0;
-        int num_a = a[idx_a--] - '0';
-        if (num_a < carry) {
-            num_a += 10;
-            num_a -= carry;
-            carry = 1;
-        } else {
-            num_a -= carry;
-            carry = 0;
-        }
-        res.push_back(num_a + '0');
-    }
-    while (idx_a >= 0) {
-        res.push_back(a[idx_a--]);
-    }
-    // 去除首部的0
-    reverse(res.begin(), res.end());
-    while (res.length() > 1) {
-        if (res[0] == '0') {
-            res = res.substr(1);
-        } else {
-            break;
-        }
-    }
-    return res;
-}
-
-void add_zero(string &str, int n) {
-    // 在str后添加n个0
-    while (n--) {
-        str.push_back('0');
-    }
-}
-
-void remove_zero(string &str) {
-    // 去除前置0
-    while (str.length() > 1) {
-        if (str[0] == '0') {
-            str = str.substr(1);
-        } else {
-            break;
-        }
-    }
-}
-
-bool bigger(const string &a, const string &b) {
-    if (a.length() > b.length()) {
-        return true;
-    } else if (a.length() < b.length()) {
-        return false;
-    }
-    return a >= b;
-}
-
-string mul(const string &a_num, const string &b_num) {
-    string a_cpy = a_num, b_cpy = b_num;
-    // 请确保参数都为非负数，我的函数会去除首部的零
-    if (a_cpy.length() == 0 || b_cpy.length() == 0 || a_cpy == "0" || b_cpy == "0") {
-        return "0";
-    }
-    // 两者都为有效的数字
-    int len_a = a_cpy.length(), len_b = b_cpy.length();
-    // 如果其中有一个的位数已经小于等于2位了
-    if (len_a <= 2 && len_b <= 2) {
-        return to_string(stoi(a_cpy) * stoi(b_cpy));
-    } else if (len_a <= 2) {
-        // 只需要将b分开
-        string b1 = b_cpy.substr(0, len_b / 2);
-        string b0 = b_cpy.substr(len_b / 2);
-        // 后面需要加len_b - len_b / 2个0
-        b1 = mul(b1, a_cpy);
-        b0 = mul(b0, a_cpy);
-        add_zero(b1, len_b - len_b / 2);
-        string res = add(b1, b0);
-        remove_zero(res); // 去除前置0
-        return res;
-    } else if (len_b <= 2) {
-        // 将a分开
-        // 只需要将b分开
-        string a1 = a_cpy.substr(0, len_a / 2);
-        string a0 = a_cpy.substr(len_a / 2);
-        // 后面需要加len_a - len_a / 2 个0
-        a1 = mul(a1, b_cpy);
-        a0 = mul(a0, b_cpy);
-        add_zero(a1, len_a - len_a / 2);
-        string res = add(a1, a0);
-        remove_zero(res);
-        return res;
-    }
-    // 两者都没有达到结束的地方
-    // 我的程序存储的高位在前面
-    // 两者想要继续计算需要AD BC的阶数相同，不然不能使用这个算法
-    // 阶数定为与较大的相同
-    if (len_b >= len_a) {
-        swap(len_b, len_a);
-        swap(a_cpy, b_cpy);
-    }
-
-    // 高位部分得到的为 len / 2，3是1，4是2，低位是(len + 1) / 2，总是容易计算的
-    if (len_b <= (len_a + 1) / 2) {
-        // b的高位参与运算的将是0
-        string A = a_cpy.substr(0, len_a / 2);
-        string B = a_cpy.substr(len_a / 2);
-        remove_zero(B);
-        string D = b_cpy;
-        string BD = mul(B, D);
-        // 此处讨论B和A的大小
-        if (bigger(B, A)) {
-            string res = sub(BD, mul(sub(B, A), D));
-            add_zero(res, (len_a + 1) / 2);
-            res = add(res, BD);
-            remove_zero(res);
-            return res;
-        } else {
-            string res = add(BD, mul(sub(A, B), D));
-            add_zero(res, (len_a + 1) / 2);
-            res = add(res, BD);
-            remove_zero(res);
-            return res;
-        }
-    } else {
-        string A = a_cpy.substr(0, len_a / 2);
-        string B = a_cpy.substr(len_a / 2);
-        int len = (len_a + 1) / 2;
-        string C = b_cpy.substr(0, len_b - len);
-        string D = b_cpy.substr(len_b - len);
-        // 去除B，D的前置0
-        remove_zero(B);
-        remove_zero(D);
-        string AC = mul(A, C);
-        string BD = mul(B, D);
-        string res = AC;
-        // 奇数拓展len_a+1个0，偶数拓展len_a个0
-        add_zero(res, (len_a + 1) / 2 * 2);
-        res = add(res, BD);
-        // 分类讨论A和B，C和D的大小
-        string mid = add(AC, BD);
-        if (bigger(A, B) && bigger(D, C)) {
-            mid = add(mid, mul(sub(A, B), sub(D, C)));
-        } else if (bigger(A, B) && bigger(C, D)) {
-            mid = sub(mid, mul(sub(A, B), sub(C, D)));
-        } else if (bigger(B, A) && bigger(D, C)) {
-            mid = sub(mid, mul(sub(B, A), sub(D, C)));
-        } else {
-            mid = add(mid, mul(sub(B, A), sub(C, D)));
-        }
-        add_zero(mid, (len_a + 1) / 2);
-        res = add(res, mid);
-        remove_zero(res);
-        return res;
-    }
-}
-
 class BigNum {
 private:
     int sign; // 符号位
     string num; // 数据
+
+    static string add(const string &a, const string &b) {
+        int len_a = a.length(), len_b = b.length();
+        string result;
+        int idx_a = len_a - 1, idx_b = len_b - 1;
+        int carry = 0;
+        while (idx_a >= 0 || idx_b >= 0 || carry > 0) {
+            carry += idx_a >= 0 ? a[idx_a--] - '0' : 0;
+            carry += idx_b >= 0 ? b[idx_b--] - '0' : 0;
+            result.push_back(carry % 10 + '0');
+            carry /= 10;
+        }
+        reverse(result.begin(), result.end());
+        return result;
+    }
+
+    static string sub(const string &a, const string &b) {
+//    cout << a << " " << b << "\n";
+        // 输入请确保a >= b
+        int len_a = a.length(), len_b = b.length();
+        assert(len_a >= len_b);
+        int idx_a = len_a - 1, idx_b = len_b - 1;
+        int carry = 0;
+        string res;
+        while (idx_b >= 0 || carry > 0) {
+            carry += idx_b >= 0 ? b[idx_b--] - '0' : 0;
+            int num_a = a[idx_a--] - '0';
+            if (num_a < carry) {
+                num_a += 10;
+                num_a -= carry;
+                carry = 1;
+            } else {
+                num_a -= carry;
+                carry = 0;
+            }
+            res.push_back(num_a + '0');
+        }
+        while (idx_a >= 0) {
+            res.push_back(a[idx_a--]);
+        }
+        // 去除首部的0
+        reverse(res.begin(), res.end());
+        while (res.length() > 1) {
+            if (res[0] == '0') {
+                res = res.substr(1);
+            } else {
+                break;
+            }
+        }
+        return res;
+    }
+
+    static void add_zero(string &str, int n) {
+        // 在str后添加n个0
+        while (n--) {
+            str.push_back('0');
+        }
+    }
+
+    static void remove_zero(string &str) {
+        // 去除前置0
+        while (str.length() > 1) {
+            if (str[0] == '0') {
+                str = str.substr(1);
+            } else {
+                break;
+            }
+        }
+    }
+
+    static bool bigger(const string &a, const string &b) {
+        if (a.length() > b.length()) {
+            return true;
+        } else if (a.length() < b.length()) {
+            return false;
+        }
+        return a >= b;
+    }
+
+    static string mul(const string &a_num, const string &b_num) {
+        string a_cpy = a_num, b_cpy = b_num;
+        // 请确保参数都为非负数，我的函数会去除首部的零
+        if (a_cpy.length() == 0 || b_cpy.length() == 0 || a_cpy == "0" || b_cpy == "0") {
+            return "0";
+        }
+        // 两者都为有效的数字
+        int len_a = a_cpy.length(), len_b = b_cpy.length();
+        // 如果其中有一个的位数已经小于等于2位了
+        if (len_a <= 2 && len_b <= 2) {
+            return to_string(stoi(a_cpy) * stoi(b_cpy));
+        } else if (len_a <= 2) {
+            // 只需要将b分开
+            string b1 = b_cpy.substr(0, len_b / 2);
+            string b0 = b_cpy.substr(len_b / 2);
+            // 后面需要加len_b - len_b / 2个0
+            b1 = mul(b1, a_cpy);
+            b0 = mul(b0, a_cpy);
+            add_zero(b1, len_b - len_b / 2);
+            string res = add(b1, b0);
+            remove_zero(res); // 去除前置0
+            return res;
+        } else if (len_b <= 2) {
+            // 将a分开
+            // 只需要将b分开
+            string a1 = a_cpy.substr(0, len_a / 2);
+            string a0 = a_cpy.substr(len_a / 2);
+            // 后面需要加len_a - len_a / 2 个0
+            a1 = mul(a1, b_cpy);
+            a0 = mul(a0, b_cpy);
+            add_zero(a1, len_a - len_a / 2);
+            string res = add(a1, a0);
+            remove_zero(res);
+            return res;
+        }
+        // 两者都没有达到结束的地方
+        // 我的程序存储的高位在前面
+        // 两者想要继续计算需要AD BC的阶数相同，不然不能使用这个算法
+        // 阶数定为与较大的相同
+        if (len_b >= len_a) {
+            swap(len_b, len_a);
+            swap(a_cpy, b_cpy);
+        }
+
+        // 高位部分得到的为 len / 2，3是1，4是2，低位是(len + 1) / 2，总是容易计算的
+        if (len_b <= (len_a + 1) / 2) {
+            // b的高位参与运算的将是0
+            string A = a_cpy.substr(0, len_a / 2);
+            string B = a_cpy.substr(len_a / 2);
+            remove_zero(B);
+            string D = b_cpy;
+            string BD = mul(B, D);
+            // 此处讨论B和A的大小
+            if (bigger(B, A)) {
+                string res = sub(BD, mul(sub(B, A), D));
+                add_zero(res, (len_a + 1) / 2);
+                res = add(res, BD);
+                remove_zero(res);
+                return res;
+            } else {
+                string res = add(BD, mul(sub(A, B), D));
+                add_zero(res, (len_a + 1) / 2);
+                res = add(res, BD);
+                remove_zero(res);
+                return res;
+            }
+        } else {
+            string A = a_cpy.substr(0, len_a / 2);
+            string B = a_cpy.substr(len_a / 2);
+            int len = (len_a + 1) / 2;
+            string C = b_cpy.substr(0, len_b - len);
+            string D = b_cpy.substr(len_b - len);
+            // 去除B，D的前置0
+            remove_zero(B);
+            remove_zero(D);
+            string AC = mul(A, C);
+            string BD = mul(B, D);
+            string res = AC;
+            // 奇数拓展len_a+1个0，偶数拓展len_a个0
+            add_zero(res, (len_a + 1) / 2 * 2);
+            res = add(res, BD);
+            // 分类讨论A和B，C和D的大小
+            string mid = add(AC, BD);
+            if (bigger(A, B) && bigger(D, C)) {
+                mid = add(mid, mul(sub(A, B), sub(D, C)));
+            } else if (bigger(A, B) && bigger(C, D)) {
+                mid = sub(mid, mul(sub(A, B), sub(C, D)));
+            } else if (bigger(B, A) && bigger(D, C)) {
+                mid = sub(mid, mul(sub(B, A), sub(D, C)));
+            } else {
+                mid = add(mid, mul(sub(B, A), sub(C, D)));
+            }
+            add_zero(mid, (len_a + 1) / 2);
+            res = add(res, mid);
+            remove_zero(res);
+            return res;
+        }
+    }
+
 public:
-    BigNum(string &num) {
+    BigNum(const string &num_str) {
+        string num = num_str;
         if (isdigit(num[0])) {
             sign = 1;
         } else if (num[0] == '-') {
@@ -332,23 +334,28 @@ public:
     }
 };
 
+enum Op {
+    ADD = 1, SUB, MUL
+};
+
 int main() {
     ifstream in("in.dat");
     ofstream out("out.dat");
     if (!in.is_open()) {
+        cout << "Unable to open in.dat.\n";
         return 0;
     }
     BigNum a, b, add_v, sub_v, mul_v;
     int op;
     while (in >> a >> b >> op) {
         switch (op) {
-            case 1:
+            case ADD:
                 out << a + b << "\n";
                 break;
-            case 2:
+            case SUB:
                 out << a - b << "\n";
                 break;
-            case 3:
+            case MUL:
                 out << a * b << "\n";
                 break;
             default:
