@@ -13,6 +13,7 @@
 #include <cmath>
 #include <climits>
 #include <cfloat>
+#include <ctime>
 
 using namespace std;
 
@@ -24,7 +25,8 @@ struct Point {
 bool operator<(const Point &a, const Point &b) {
     if (a.x < b.x) {
         return true;
-    } else if (a.x > b.x) {
+    }
+    else if (a.x > b.x) {
         return false;
     }
     return a.y < b.y;
@@ -55,7 +57,8 @@ void merge(vector<Point> &points, int left, int mid, int right) {
     while (l < mid && r < right) {
         if (cmpy(points[l], points[r])) {
             temp.push_back(points[l++]);
-        } else {
+        }
+        else {
             temp.push_back(points[r++]);
         }
     }
@@ -74,7 +77,8 @@ void merge(vector<Point> &points, int left, int mid, int right) {
 void get_min(const vector<Point> &points, vector<Point> &points_y, int left, int right, double &closest) {
     if (left >= right) {
         return;
-    } else if (left + 3 >= right) {
+    }
+    else if (left + 3 >= right) {
         // 最小情况，暴力求解
         for (int i = left; i < right; ++i) {
             for (int j = i + 1; j < right; ++j) {
@@ -83,7 +87,8 @@ void get_min(const vector<Point> &points, vector<Point> &points_y, int left, int
                     closest = dis;
                     res.clear();
                     res.insert(make_pair(points[i], points[j]));
-                } else if (dis == closest) {
+                }
+                else if (dis == closest) {
                     res.insert(make_pair(points[i], points[j]));
                 }
             }
@@ -102,7 +107,7 @@ void get_min(const vector<Point> &points, vector<Point> &points_y, int left, int
     // 找出x方向上符合点
     vector<Point> order_y;
     for (int i = left; i < right; ++i) {
-        if (abs(points_y[i].x - points[mid].x) < closest) {
+        if (abs(points_y[i].x - points[mid].x) <= closest) {
             order_y.push_back(points_y[i]);
         }
     }
@@ -120,7 +125,8 @@ void get_min(const vector<Point> &points, vector<Point> &points_y, int left, int
                 closest = dis;
                 res.clear();
                 res.insert(make_pair(order_y[i], order_y[j]));
-            } else if (dis == closest) {
+            }
+            else if (dis == closest) {
                 res.insert(make_pair(order_y[i], order_y[j]));
             }
         }
@@ -147,19 +153,25 @@ int main() {
     in >> cnt;
     vector<Point> points;
     int x, y;
+    // 输入点
     for (int i = 0; i < cnt; ++i) {
         in >> x >> y;
-        points.push_back({x, y});
+        points.push_back({ x, y });
     }
     in.close();
     sort(points.begin(), points.end(), cmpx);
     auto points_y = points;
 
     double dis = DBL_MAX;
+    clock_t start = clock();
     get_min(points, points_y, 0, cnt, dis);
+    clock_t end = clock();
+    // 写入到文件
     for (auto &pts : res) {
         out << pts.first.x << " " << pts.first.y << " " << pts.second.x << " " << pts.second.y << "\n";
     }
+    // 统计一下时间
+    std::cout << (end - start) << "\n";
     out.close();
 
     return 0;
