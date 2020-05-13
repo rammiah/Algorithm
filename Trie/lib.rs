@@ -1,17 +1,18 @@
-
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
+use std::char;
+use std::collections::BTreeMap;
 
 pub struct Trie {
-    words: HashMap<char, Trie>,
+    // 不能用数组真是太有点难受了
+    words: BTreeMap<char, Trie>,
     end: bool,
 }
 
 impl Trie {
     pub fn new() -> Trie {
         Trie {
-            words: HashMap::new(),
+            words: BTreeMap::new(),
             end: false,
         }
     }
@@ -34,7 +35,8 @@ impl Trie {
             self.end = true;
             return;
         }
-        match self.words.get_mut(&word.chars().next().unwrap()) {
+        let ch = word.chars().next().unwrap();
+        match self.words.get_mut(&ch) {
             Some(t) => {
                 // 此时是一个Trie
                 t.add(&word[1..]);
@@ -44,7 +46,7 @@ impl Trie {
                 // 需要先添加单词再插入map
                 // 否则会报所有权已转移错误
                 t.add(&word[1..]);
-                self.words.insert(word.chars().next().unwrap(), t);
+                self.words.insert(ch, t);
             }
         }
     }
@@ -53,7 +55,8 @@ impl Trie {
         if word.is_empty() {
             return self.end;
         }
-        match self.words.get(&word.chars().next().unwrap()) {
+        let ch = word.chars().next().unwrap();
+        match self.words.get(&ch){
             Some(t) => t.contains(&word[1..]),
             None => false,
         }
@@ -109,9 +112,7 @@ mod tests {
         assert_eq!(t.starts_with("h"), vec!["hello"]);
         assert_eq!(t.starts_with("ba"), vec!["bad"]);
         // 需要进行排序操作
-        let mut result = t.starts_with("b");
-        result.sort();
-        assert_eq!(result, vec!["bad", "bool"]);
+        assert_eq!(t.starts_with("b"), vec!["bad", "bool"]);
     }
 
     #[test]
